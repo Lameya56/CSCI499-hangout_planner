@@ -10,6 +10,7 @@ import { SidebarProvider } from './components/ui/sidebar.jsx'
 import { createCookieSessionStorage } from 'react-router-dom'
 import Home from './pages/Home.jsx'
 import Plan from './pages/Plan.jsx'
+import Calendar from './pages/Calendar.jsx'
 import ProtectedLayout from './components/ProtectedLayout.jsx'
 import { AuthProvider } from './AuthContext.jsx'
 import Respond from './pages/Respond.jsx'
@@ -28,7 +29,7 @@ function AppRoutes() {
       children: [
         { path: "/home", element: <Home /> },
         { path: "/plan", element: <Plan /> },
-        // { path: "/calendar", element: <Calendar />},
+        { path: "/calendar", element: <Calendar />},
         // { path: "/groups", element:<Groups />},
         // { path: "/memories", element: <Memories/>}
         // ... add other protected routes here
