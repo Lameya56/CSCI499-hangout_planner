@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useForm } from "react-hook-form"
-import { Link, useNavigate } from "react-router-dom" 
+import { Link, useNavigate, useSearchParams } from "react-router-dom" 
 
 
 const SignUp = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = searchParams.get('redirect');
     const {register, handleSubmit, formState: {errors, isSubmitting}, getValues, reset} = useForm();
     const onSubmit = async(data) => {
         try {
@@ -27,12 +29,30 @@ const SignUp = () => {
             const result = await res.json();
             console.log(result);
 
+            // if (res.ok) {
+            //     // Redirect to login page after successful signup
+            //     navigate("/login");
+            // } else {
+            //     alert(result.message);
+            // }
             if (res.ok) {
-                // Redirect to login page after successful signup
-                navigate("/login");
+                // ✅ Store token immediately
+                if (result.token) {
+                localStorage.setItem('token', result.token);
+                }
+                
+                alert('Account created successfully!');
+                
+                // ✅ Redirect to invitation if that's where they came from
+                if (redirectTo) {
+                navigate(redirectTo);
+                } else {
+                navigate('/home');
+                }
             } else {
-                alert(result.message);
+                alert(result.message || 'Signup failed');
             }
+
         } catch (err) {
             console.error(err.message);
         }

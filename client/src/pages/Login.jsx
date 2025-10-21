@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useForm } from "react-hook-form"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "../AuthContext.jsx"
 const Login = () => {
     const { setAuthUser } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = searchParams.get('redirect');
     const {register, handleSubmit, formState:{errors, isSubmitting}, reset} = useForm();
       const onSubmit = async (data) => {
         try {
@@ -30,7 +32,12 @@ const Login = () => {
             if (res.ok) {
                 setAuthUser(result.user); // Set the authenticated user in the context
                 localStorage.setItem("token", result.token) //storing the jwt
-                navigate("/home"); // Redirect to dashboard/home page after successful login
+                // ✅ Redirect to invitation if that's where they came from
+                if (redirectTo) {
+                navigate(redirectTo);
+                } else {
+                    navigate("/home"); // Redirect to dashboard/home page after successful login
+                }
             } else {
                 alert(result.message);
             }

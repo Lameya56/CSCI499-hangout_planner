@@ -5,9 +5,17 @@ import {Outlet, Navigate} from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 
 const ProtectedLayout = () => {
-    const { authUser } = useAuth();
+    const { authUser, loading } = useAuth();
 
-    // If there's no authenticated user, redirect to the login page
+    //while the authentication status is being checked show a loading message/spinner(perhaps sth we can add later)
+    if (loading) {
+        return (
+            <div>
+                Loading...
+            </div>
+        )
+    }
+    //After loading is complete if there's still no user, then redirect
     if (!authUser) {
         return <Navigate to="/login" />;
     }
