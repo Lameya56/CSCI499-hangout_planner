@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes.js';
 import planRoutes from './routes/planRoutes.js';
 import invitationRoutes from './routes/invitationRoutes.js';
 import voteRoutes from './routes/voteRoutes.js';
+import './utils/cronJob.js';
 
 const app = express()
 app.use(cors({ origin: "http://localhost:5173", credentials: true }))
