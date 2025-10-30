@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import {plansData} from "../data/plansData.js"
+import { plansData } from "../data/plansData.js";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom"; // added
+
 const Home = () => {
   const [user, setUser] = useState(null);
   const [plans, setPlans] = useState([]);
@@ -28,7 +30,7 @@ const Home = () => {
           setUser(data.user);
           try {
             const plansRes = await fetch("/api/plans", { headers: { Authorization: `Bearer ${token}` } });
-          const plansData = await plansRes.json();
+            const plansData = await plansRes.json();
             if (plansRes.ok) {
               const formattedPlans = plansData.plans.map(p => ({
                 ...p,
@@ -36,8 +38,7 @@ const Home = () => {
               }));
               setPlans(formattedPlans);
             }
-          }
-          catch(err){
+          } catch (err) {
             console.error("Failed fetching plans:", err);
           }
           // setPlans(plansData); //loading mock data
@@ -54,9 +55,8 @@ const Home = () => {
   }, []);
 
   if (!user) return <p>Loading...</p>;
-  
 
-   const getStatusColor = (plan) => {
+  const getStatusColor = (plan) => {
     if (plan.confirmed) return "bg-green-500"; // confirmed
     const now = new Date();
     const deadline = new Date(plan.deadline);
@@ -72,48 +72,49 @@ const Home = () => {
       {/* Grid layout for 3 cards per row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.map((plan) => (
-          <Card
+          <Link
             key={plan.id}
-            className="relative overflow-hidden rounded-2xl shadow-md hover:shadow-lg transition group p-0 gap-0"
+            to={`/plans/${plan.id}`}                            // ⬅️ makes the whole card clickable
+            className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-2xl"
+            aria-label={`Open plan: ${plan.title || "Plan"}`}
           >
-            {/* Image section */}
-            
-            <img
-              src={plan.image}
-              alt={plan.title}
-              className="w-full h-50 object-cover rounded-t-2xl"
-            />
-            {console.log(plans.map(p => p.image))}
-            
+            <Card className="relative overflow-hidden rounded-2xl shadow-md hover:shadow-lg transition group p-0 gap-0">
+              {/* Image section */}
+              <img
+                src={plan.image}
+                alt={plan.title}
+                className="w-full h-50 object-cover rounded-t-2xl"
+              />
+              {console.log(plans.map(p => p.image))}
 
-            {/* Overlay text (bottom-left) */}
-            <CardContent className="text-left p-4">
-              <h2 className="text-lg font-semibold text-gray-900">{plan.title}</h2>
-              <p className="text-sm text-gray-600">
-                {plan.confirmed
-                  ? `Hangout: ${new Date(plan.hangoutDate).toLocaleDateString()}`
-                  : `Deadline: ${new Date(plan.deadline).toLocaleDateString()}`}
-              </p>
-            </CardContent>
+              {/* Overlay text (bottom-left) */}
+              <CardContent className="text-left p-4">
+                <h2 className="text-lg font-semibold text-gray-900">{plan.title}</h2>
+                <p className="text-sm text-gray-600">
+                  {plan.confirmed
+                    ? `Hangout: ${new Date(plan.hangoutDate).toLocaleDateString()}`
+                    : `Deadline: ${new Date(plan.deadline).toLocaleDateString()}`}
+                </p>
+              </CardContent>
 
-            {/* Status Circle (bottom-right) */}
-            <div
-              className={`absolute bottom-4 right-4 w-5 h-5 rounded-full ${getStatusColor(
-                plan
-              )}`}
-              title={
-                plan.confirmed
-                  ? "Confirmed"
-                  : new Date(plan.deadline) > new Date()
-                  ? "Before deadline"
-                  : "Past deadline"
-              }
-            ></div>
-          </Card>
+              {/* Status Circle (bottom-right) */}
+              <div
+                className={`absolute bottom-4 right-4 w-5 h-5 rounded-full ${getStatusColor(
+                  plan
+                )}`}
+                title={
+                  plan.confirmed
+                    ? "Confirmed"
+                    : new Date(plan.deadline) > new Date()
+                    ? "Before deadline"
+                    : "Past deadline"
+                }
+              ></div>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>
-
   );
 };
 
