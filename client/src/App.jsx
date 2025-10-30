@@ -20,7 +20,9 @@ function AppRoutes() {
   let element = useRoutes([
     // Public routes
     { path: "/", element: <SignUp /> },
+    { path: "/signup", element: <SignUp /> },
     { path: "/login", element: <Login /> },
+    { path: "/respond/:token", element: <Respond /> },
     
     // Protected routes nested under a layout
     {

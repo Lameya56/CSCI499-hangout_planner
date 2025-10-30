@@ -18,8 +18,18 @@ export const registerUser = async (req, res) => {
       "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email",
       [name, email, hashedPassword]
     );
+    const user = result.rows[0];
+    // ✅ NEW: Link any pending invitations to this user
+    await linkInvitationToUser(user.id, email);
 
-    return res.status(201).json({ message: "User registered successfully", user: result.rows[0] });
+    // Generate token immediately so they can login after signup
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    return res.status(201).json({ message: "User registered successfully", user: result.rows[0], token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -37,7 +47,8 @@ export const loginUser = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid password" });
-
+    //NEW: Link any pending invitations
+    await linkInvitationToUser(user.id, email);
     const token = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
@@ -61,4 +72,40 @@ export const logoutUser = (req, res) => {
     if (err) return res.status(500).json({ message: "Logout failed" });
     res.status(200).json({ message: "Logged out successfully" });
   });
+};
+
+//Get user profile
+export const getProfile = async (req, res) => {
+  try{
+    const {id} = req.user;
+    const result = await pool.query("SELECT id, name, email FROM users where id= $1", [id]);
+    const user = result.rows[0];
+    if (!user) {
+      return (res.status(404).json({ message: "User not found" }));
+    }
+    else {
+      return (res.status(200).json( {user} ));
+    }
+  }
+  catch(err){
+    console.error(err);
+    res.status(500).json({ message: "server error" });
+  }
+};
+
+//Link invitations to user upon registration
+export const linkInvitationToUser = async (userId, email) => {
+  try {
+    // Find all invitations for this email and link them to user
+    const result = await pool.query(
+      'UPDATE invitations SET invitee_id = $1 WHERE email = $2 AND invitee_id IS NULL RETURNING *',
+      [userId, email]
+    );
+    
+    if (result.rows.length > 0) {
+      console.log(`✅ Linked ${result.rows.length} invitation(s) to user ${userId}`);
+    }
+  } catch (err) {
+    console.error('Error linking invitations:', err);
+  }
 };

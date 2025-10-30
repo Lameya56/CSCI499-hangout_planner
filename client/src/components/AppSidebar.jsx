@@ -47,7 +47,7 @@ const AppSideBar = () => {
                 <SidebarGroup>
                     <SidebarGroupLabel className="justify-center"> Application </SidebarGroupLabel>
                     <SidebarGroupContent >
-                        <SidebarMenu className="flex felx-row items-center">
+                        <SidebarMenu className="flex items-center">
                             {items.map(item => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild >
