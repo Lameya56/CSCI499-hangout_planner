@@ -16,6 +16,9 @@ import {
   MapPin,
   Trophy,
   ImageIcon,
+  UserCheck,
+  UserX,
+  Crown,
 } from "lucide-react";
 
 /* ========= Date/time helpers (timezone-safe) ========= */
@@ -57,16 +60,89 @@ function isHttps(url) {
   return typeof url === "string" && /^https:\/\//i.test(url);
 }
 
+/* ========= Status badge helper ========= */
+function StatusBadge({ kind, className = "" }) {
+  // kind: 'host' | 'responded' | 'pending' | 'not_invited'
+  if (kind === "host") {
+    return (
+      <span
+        className={
+          "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-blue-50 border-blue-300 text-blue-700 " +
+          className
+        }
+        title="You are the host of this plan"
+      >
+        <Crown className="h-3.5 w-3.5" /> Host
+      </span>
+    );
+  }
+  if (kind === "responded") {
+    return (
+      <span
+        className={
+          "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-green-50 border-green-300 text-green-700 " +
+          className
+        }
+        title="You have responded"
+      >
+        <UserCheck className="h-3.5 w-3.5" /> Responded
+      </span>
+    );
+  }
+  if (kind === "pending") {
+    return (
+      <span
+        className={
+          "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-amber-50 border-amber-300 text-amber-700 " +
+          className
+        }
+        title="You have not responded yet"
+      >
+        <UserX className="h-3.5 w-3.5" /> Pending
+      </span>
+    );
+  }
+  return (
+    <span
+      className={
+        "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-muted text-foreground/70 " +
+        className
+      }
+      title="You are not invited to this plan"
+    >
+      Not invited
+    </span>
+  );
+}
+
 export default function PlanDetails() {
   const { id } = useParams();
   const [plan, setPlan] = useState(null);
+  const [viewer, setViewer] = useState(null); // {id, name, email}
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
+  // Fetch viewer profile + plan details
   useEffect(() => {
-    const fetchPlan = async () => {
+    const fetchAll = async () => {
+      setLoading(true);
       try {
         const token = localStorage.getItem("token");
+
+        // profile
+        let v = null;
+        try {
+          const pres = await fetch("/api/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (pres.ok) {
+            const pjson = await pres.json();
+            v = pjson.user || null;
+            setViewer(v);
+          }
+        } catch {}
+
+        // plan
         const res = await fetch(`/api/plans/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -79,7 +155,7 @@ export default function PlanDetails() {
         setLoading(false);
       }
     };
-    fetchPlan();
+    fetchAll();
   }, [id]);
 
   const now = new Date();
@@ -94,6 +170,8 @@ export default function PlanDetails() {
     votingClosed,
     winningDates,
     winningActivities,
+    viewerStatus, // 'host' | 'responded' | 'pending' | 'not_invited'
+    viewerInviteToken, // optional deep link if you want to nudge to Respond page
   } = useMemo(() => {
     if (!plan) {
       return {
@@ -106,6 +184,8 @@ export default function PlanDetails() {
         votingClosed: false,
         winningDates: [],
         winningActivities: [],
+        viewerStatus: "not_invited",
+        viewerInviteToken: null,
       };
     }
 
@@ -113,16 +193,12 @@ export default function PlanDetails() {
     const image = plan.image_url || plan.image || "";
     const location = plan.location || plan.place || "";
 
-    // Deadline (ISO string or 'YYYY-MM-DDTHH:mm')
+    // Deadline
     const deadlineISO = plan.deadline || plan.voting_deadline || null;
     const deadlineDate = deadlineISO ? new Date(deadlineISO) : null;
     const votingClosed = deadlineDate ? now > deadlineDate : false;
 
     // ----- DATE/TIME options -----
-    // We accept formats like:
-    // - plan.dates: [{ date: 'YYYY-MM-DD', time?: 'HH:MM', votes?: n, suggested_by?: ... }, ...]
-    // - or array of strings 'YYYY-MM-DD'
-    // - plus single fields plan.hangoutDate/plan.date and plan.time (from creation)
     let dateOptions = [];
     if (Array.isArray(plan.dates) && plan.dates.length) {
       dateOptions = plan.dates
@@ -141,7 +217,6 @@ export default function PlanDetails() {
         })
         .filter((x) => x.date);
     } else {
-      // fallbacks from Plan creation
       const baseDate =
         (plan.hangoutDate && String(plan.hangoutDate).slice(0, 10)) ||
         (plan.date && String(plan.date).slice(0, 10)) ||
@@ -152,23 +227,16 @@ export default function PlanDetails() {
       }
     }
 
-    // Remove duplicates (same date+time), summing votes if duplicated
     const dateKey = (x) => `${x.date}__${x.time || ""}`;
     const dateMap = new Map();
     for (const x of dateOptions) {
       const k = dateKey(x);
       const prev = dateMap.get(k);
-      if (prev) {
-        dateMap.set(k, { ...prev, votes: (prev.votes || 0) + (x.votes || 0) });
-      } else {
-        dateMap.set(k, x);
-      }
+      dateMap.set(k, prev ? { ...prev, votes: (prev.votes || 0) + (x.votes || 0) } : x);
     }
     dateOptions = Array.from(dateMap.values()).sort(byVotesDesc);
 
     // ----- ACTIVITY options -----
-    // Expect plan.activities like:
-    // [{ name: 'Bowling', location: 'Main Lanes', votes: 3, suggested_by?: ... }, ...]
     let activityOptions = Array.isArray(plan.activities)
       ? plan.activities.map((a) => ({
           name: typeof a === "string" ? a : a?.name || "Activity",
@@ -178,31 +246,55 @@ export default function PlanDetails() {
         }))
       : [];
 
-    // Remove duplicates (same name+location)
     const actKey = (x) => `${x.name}__${x.location || ""}`.toLowerCase();
     const actMap = new Map();
     for (const x of activityOptions) {
       const k = actKey(x);
       const prev = actMap.get(k);
-      if (prev) {
-        actMap.set(k, { ...prev, votes: (prev.votes || 0) + (x.votes || 0) });
-      } else {
-        actMap.set(k, x);
-      }
+      actMap.set(k, prev ? { ...prev, votes: (prev.votes || 0) + (x.votes || 0) } : x);
     }
     activityOptions = Array.from(actMap.values()).sort(byVotesDesc);
 
-    // Winners (support ties)
     const topDateVotes = maxVotes(dateOptions);
     const topActVotes = maxVotes(activityOptions);
     const winningDates =
-      topDateVotes > 0
-        ? dateOptions.filter((x) => (x.votes || 0) === topDateVotes)
-        : [];
+      topDateVotes > 0 ? dateOptions.filter((x) => (x.votes || 0) === topDateVotes) : [];
     const winningActivities =
-      topActVotes > 0
-        ? activityOptions.filter((x) => (x.votes || 0) === topActVotes)
-        : [];
+      topActVotes > 0 ? activityOptions.filter((x) => (x.votes || 0) === topActVotes) : [];
+
+    // ----- Viewer status -----
+    let viewerStatus = "not_invited";
+    let viewerInviteToken = null;
+
+    const hostId = plan.host_id || plan.hostId;
+    if (viewer && viewer.id && hostId && viewer.id === hostId) {
+      viewerStatus = "host";
+    } else if (Array.isArray(plan.invitations)) {
+      // invitations items may look like:
+      // { invitee_id, invitee_email, status: 'pending'|'responded', token? }
+      const match = plan.invitations.find((inv) => {
+        if (!inv) return false;
+        // prefer id match, fallback to email match if present
+        const byId =
+          viewer && viewer.id && (inv.invitee_id === viewer.id || inv.inviteeId === viewer.id);
+        const byEmail =
+          viewer &&
+          viewer.email &&
+          typeof inv.invitee_email === "string" &&
+          inv.invitee_email.toLowerCase() === viewer.email.toLowerCase();
+        return byId || byEmail;
+      });
+
+      if (match) {
+        const st = (match.status || "").toLowerCase();
+        if (st === "responded") viewerStatus = "responded";
+        else if (st === "pending") viewerStatus = "pending";
+        else viewerStatus = "pending"; // default to pending if unknown
+        if (typeof match.token === "string" && match.token) {
+          viewerInviteToken = match.token;
+        }
+      }
+    }
 
     return {
       title,
@@ -214,8 +306,10 @@ export default function PlanDetails() {
       votingClosed,
       winningDates,
       winningActivities,
+      viewerStatus,
+      viewerInviteToken,
     };
-  }, [plan, now]);
+  }, [plan, viewer, now]);
 
   if (loading) {
     return (
@@ -272,108 +366,127 @@ export default function PlanDetails() {
 
         {/* Header */}
         <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <CardTitle className="text-2xl">{title}</CardTitle>
-              <CardDescription>
+              <CardDescription className="mt-1 flex items-center gap-2 flex-wrap">
                 {location ? (
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
                     {location}
                   </span>
                 ) : (
-                    // location tbd
-                  <span className="opacity-70"></span>
+                  <span className="opacity-70">Location TBD</span>
                 )}
               </CardDescription>
             </div>
 
-            <div className="flex items-center gap-2">
-              {deadlineISO ? (
+            <div className="flex flex-col items-end gap-2">
+              {/* Your Status badge */}
+              <StatusBadge kind={viewerStatus} />
+
+              {/* Voting deadline chip */}
+              {plan.deadline || plan.voting_deadline ? (
                 <span
                   className={[
                     "text-xs px-2 py-1 rounded border",
-                    votingClosed
+                    (plan.deadline && new Date(plan.deadline) < new Date()) ||
+                    (plan.voting_deadline && new Date(plan.voting_deadline) < new Date())
                       ? "bg-green-50 border-green-300 text-green-700"
                       : "bg-amber-50 border-amber-300 text-amber-700",
                   ].join(" ")}
                   title="Voting deadline"
                 >
-                  {votingClosed ? "Voting closed" : "Voting open"} •{" "}
-                  {new Date(deadlineISO).toLocaleString()}
+                  {((plan.deadline && new Date(plan.deadline) < new Date()) ||
+                    (plan.voting_deadline && new Date(plan.voting_deadline) < new Date()))
+                    ? "Voting closed"
+                    : "Voting open"}{" "}
+                  •{" "}
+                  {new Date(plan.deadline || plan.voting_deadline).toLocaleString()}
                 </span>
               ) : (
                 <span className="text-xs px-2 py-1 rounded border bg-muted text-foreground/70">
                   No deadline
                 </span>
               )}
-              <Link to="/calendar">
-                <Button size="sm" variant="outline">
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
+
+              {/* Optional CTA when pending and token available */}
+              {viewerStatus === "pending" && viewerInviteToken ? (
+                <Link to={`/respond/${viewerInviteToken}`}>
+                  <Button size="sm">Respond now</Button>
+                </Link>
+              ) : null}
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-8">
           {/* ===== Final result (if voting closed) ===== */}
-          {votingClosed && (
-            <section className="rounded-lg border bg-card">
-              <div className="p-4 flex items-center gap-2 border-b">
-                <Trophy className="h-5 w-5" />
-                <div className="font-semibold">Most Popular Choices</div>
-              </div>
+          {(() => {
+            const deadlineISO = plan.deadline || plan.voting_deadline || null;
+            const closed = deadlineISO ? new Date(deadlineISO) < new Date() : false;
+            if (!closed) return null;
 
-              <div className="p-4 grid gap-6 sm:grid-cols-2">
-                {/* Winning date/time */}
-                <div>
-                  <div className="text-sm font-medium mb-2 flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4" />
-                    Date & Time
+            // compute winners from memo
+            return (
+              <section className="rounded-lg border bg-card">
+                <div className="p-4 flex items-center gap-2 border-b">
+                  <Trophy className="h-5 w-5" />
+                  <div className="font-semibold">Most Popular Choices</div>
+                </div>
+
+                <div className="p-4 grid gap-6 sm:grid-cols-2">
+                  {/* Winning date/time */}
+                  <div>
+                    <div className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4" />
+                      Date & Time
+                    </div>
+                    {winningDates.length ? (
+                      <ul className="text-sm space-y-1">
+                        {winningDates.map((x, i) => (
+                          <li key={i}>
+                            {formatYMD(x.date)}
+                            {x.time ? ` • ${formatTime(x.time)}` : ""}
+                            {typeof x.votes === "number" ? `  (votes: ${x.votes})` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-sm opacity-70">No winning date/time.</div>
+                    )}
                   </div>
-                  {winningDates.length ? (
-                    <ul className="text-sm space-y-1">
-                      {winningDates.map((x, i) => (
-                        <li key={i}>
-                          {formatYMD(x.date)}
-                          {x.time ? ` • ${formatTime(x.time)}` : ""}
-                          {typeof x.votes === "number" ? `  (votes: ${x.votes})` : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-sm opacity-70">No winning date/time.</div>
-                  )}
-                </div>
 
-                {/* Winning activity/location */}
-                <div>
-                  <div className="text-sm font-medium mb-2">Activity & Location</div>
-                  {winningActivities.length ? (
-                    <ul className="text-sm space-y-1">
-                      {winningActivities.map((a, i) => (
-                        <li key={i}>
-                          {a.name}
-                          {a.location ? ` — ${a.location}` : ""}
-                          {typeof a.votes === "number" ? `  (votes: ${a.votes})` : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-sm opacity-70">No winning activity/location.</div>
-                  )}
+                  {/* Winning activity/location */}
+                  <div>
+                    <div className="text-sm font-medium mb-2">Activity & Location</div>
+                    {winningActivities.length ? (
+                      <ul className="text-sm space-y-1">
+                        {winningActivities.map((a, i) => (
+                          <li key={i}>
+                            {a.name}
+                            {a.location ? ` — ${a.location}` : ""}
+                            {typeof a.votes === "number" ? `  (votes: ${a.votes})` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-sm opacity-70">No winning activity/location.</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            );
+          })()}
 
           {/* ===== All options (shows suggested ones too) ===== */}
           <section className="rounded-lg border bg-card">
             <div className="p-4 flex items-center gap-2 border-b">
               <div className="font-semibold">
-                {votingClosed ? "All Considered Options" : "Current Proposals (with Suggestions)"}
+                {(plan.deadline && new Date(plan.deadline) < new Date()) ||
+                (plan.voting_deadline && new Date(plan.voting_deadline) < new Date())
+                  ? "All Considered Options"
+                  : "Current Proposals (with Suggestions)"}
               </div>
             </div>
 
@@ -384,7 +497,7 @@ export default function PlanDetails() {
                   <CalendarDays className="h-4 w-4" />
                   Date & Time
                 </div>
-                {dateOptions.length ? (
+                {Array.isArray(dateOptions) && dateOptions.length ? (
                   <ul className="text-sm space-y-1">
                     {dateOptions.map((x, i) => (
                       <li key={i}>
@@ -405,7 +518,7 @@ export default function PlanDetails() {
               {/* Activity options */}
               <div>
                 <div className="text-sm font-medium mb-2">Activity & Location</div>
-                {activityOptions.length ? (
+                {Array.isArray(activityOptions) && activityOptions.length ? (
                   <ul className="text-sm space-y-1">
                     {activityOptions.map((a, i) => (
                       <li key={i}>
@@ -424,8 +537,6 @@ export default function PlanDetails() {
               </div>
             </div>
           </section>
-
-          {/* You can add invitees / notes here if desired */}
         </CardContent>
       </Card>
     </div>
