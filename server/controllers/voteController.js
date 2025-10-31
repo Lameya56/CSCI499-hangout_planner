@@ -21,9 +21,14 @@ export const submitVotes = async (req, res) => {
       return res.status(403).json({ message: 'This invitation is not for you' });
     }
 
-    // Check if already responded
-    if (invitation.status === 'responded') {
-      return res.status(400).json({ message: 'You have already responded' });
+    // // Check if already responded
+    // if (invitation.status === 'responded') {
+    //   return res.status(400).json({ message: 'You have already responded' });
+    // }
+
+    const plan = await PlanModel.getPlanDetails(invitation.plan_id);
+    if (plan.status === 'cancelled') {
+      return res.status(400).json({ message: 'This plan has been cancelled by the host'});
     }
 
     const planId = invitation.plan_id;
