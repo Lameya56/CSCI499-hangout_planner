@@ -1,6 +1,7 @@
 import * as InvitationModel from '../models/invitationModel.js';
 import * as PlanModel from '../models/planModel.js';
 import * as VoteModel from '../models/voteModel.js';
+import { pool } from "../config/database.js";
 
 // Public route - check if invitation exists
 export const checkInvitation = async (req, res) => {
@@ -76,5 +77,53 @@ export const getMyInvitation = async (req, res) => {
   } catch (err) {
     console.error('Error fetching invitation:', err);
     res.status(500).json({ message: 'Failed to fetch invitation' });
+  }
+};
+
+
+/**
+ * Accept or Decline an invitation
+ * URL example: POST /api/invitations/confirm/accept?token=123abc
+ */
+export const respondToInvitation = async (req, res) => {
+  const { status } = req.params; // "accepted" or "declined"
+  const { token } = req.query;   // token from URL query
+
+  if (!["accepted", "declined"].includes(status)) {
+    return res.status(400).json({ message: "Invalid status" });
+  }
+
+  try {
+    // 1. Find invitation by token
+    const invitationResult = await pool.query(
+      `SELECT id, status 
+       FROM invitations 
+       WHERE invite_token = $1`,
+      [token]
+    );
+
+    if (invitationResult.rowCount === 0) {
+      return res.status(404).json({ message: "Invalid or expired token" });
+    }
+
+    const invitation = invitationResult.rows[0];
+
+    // 2. Check if already responded
+    if (invitation.status == "accepted" || invitation.status == "declined") {
+      return res.status(400).json({ message: "You have already responded to this invitation." });
+    }
+
+    // 3. Update invitation status
+    await pool.query(
+      `UPDATE invitations
+       SET status = $1, responded_at = NOW()
+       WHERE id = $2`,
+      [status, invitation.id]
+    );
+
+    res.json({ message: `Invitation ${status} successfully.` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
