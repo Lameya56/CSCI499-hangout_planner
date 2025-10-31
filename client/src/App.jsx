@@ -11,6 +11,7 @@ import { createCookieSessionStorage } from 'react-router-dom'
 import Home from './pages/Home.jsx'
 import Plan from './pages/Plan.jsx'
 import Calendar from './pages/Calendar.jsx'
+import PlanDetails from "./pages/PlanDetails.jsx";
 import ProtectedLayout from './components/ProtectedLayout.jsx'
 import { AuthProvider } from './AuthContext.jsx'
 import Respond from './pages/Respond.jsx'
@@ -32,6 +33,7 @@ function AppRoutes() {
         { path: "/home", element: <Home /> },
         { path: "/plan", element: <Plan /> },
         { path: "/calendar", element: <Calendar /> },
+        { path: "/plans/:id", element: <PlanDetails /> },
         // { path: "/groups", element:<Groups />},
         // { path: "/memories", element: <Memories/>}
         // ... add other protected routes here
