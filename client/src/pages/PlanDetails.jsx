@@ -12,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   ChevronLeft,
   CalendarDays,
-  Clock3,
   MapPin,
   Trophy,
   ImageIcon,
@@ -60,56 +59,31 @@ function isHttps(url) {
   return typeof url === "string" && /^https:\/\//i.test(url);
 }
 
-/* ========= Status badge helper ========= */
-function StatusBadge({ kind, className = "" }) {
-  // kind: 'host' | 'responded' | 'pending' | 'not_invited'
+/* ========= Status badge (same aesthetic as before) ========= */
+function StatusBadge({ kind }) {
   if (kind === "host") {
     return (
-      <span
-        className={
-          "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-blue-50 border-blue-300 text-blue-700 " +
-          className
-        }
-        title="You are the host of this plan"
-      >
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-blue-50 border-blue-300 text-blue-700">
         <Crown className="h-3.5 w-3.5" /> Host
       </span>
     );
   }
   if (kind === "responded") {
     return (
-      <span
-        className={
-          "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-green-50 border-green-300 text-green-700 " +
-          className
-        }
-        title="You have responded"
-      >
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-green-50 border-green-300 text-green-700">
         <UserCheck className="h-3.5 w-3.5" /> Responded
       </span>
     );
   }
   if (kind === "pending") {
     return (
-      <span
-        className={
-          "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-amber-50 border-amber-300 text-amber-700 " +
-          className
-        }
-        title="You have not responded yet"
-      >
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-amber-50 border-amber-300 text-amber-700">
         <UserX className="h-3.5 w-3.5" /> Pending
       </span>
     );
   }
   return (
-    <span
-      className={
-        "inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-muted text-foreground/70 " +
-        className
-      }
-      title="You are not invited to this plan"
-    >
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-muted text-foreground/70">
       Not invited
     </span>
   );
@@ -118,27 +92,25 @@ function StatusBadge({ kind, className = "" }) {
 export default function PlanDetails() {
   const { id } = useParams();
   const [plan, setPlan] = useState(null);
-  const [viewer, setViewer] = useState(null); // {id, name, email}
+  const [viewer, setViewer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // Fetch viewer profile + plan details
+  // fetch viewer + plan
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem("token");
 
-        // profile
-        let v = null;
+        // viewer
         try {
           const pres = await fetch("/api/profile", {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (pres.ok) {
             const pjson = await pres.json();
-            v = pjson.user || null;
-            setViewer(v);
+            setViewer(pjson.user || null);
           }
         } catch {}
 
@@ -155,7 +127,17 @@ export default function PlanDetails() {
         setLoading(false);
       }
     };
+
     fetchAll();
+
+    // live refetch when others update (Plan page, Respond page)
+    const onRefresh = () => fetchAll();
+    window.addEventListener("plans:updated", onRefresh);
+    window.addEventListener("votes:submitted", onRefresh);
+    return () => {
+      window.removeEventListener("plans:updated", onRefresh);
+      window.removeEventListener("votes:submitted", onRefresh);
+    };
   }, [id]);
 
   const now = new Date();
@@ -165,13 +147,13 @@ export default function PlanDetails() {
     image,
     location,
     deadlineISO,
+    votingClosed,
     dateOptions,
     activityOptions,
-    votingClosed,
     winningDates,
     winningActivities,
-    viewerStatus, // 'host' | 'responded' | 'pending' | 'not_invited'
-    viewerInviteToken, // optional deep link if you want to nudge to Respond page
+    viewerStatus,        // 'host' | 'responded' | 'pending' | 'not_invited'
+    viewerInviteToken,   // token to nudge respond, if desired
   } = useMemo(() => {
     if (!plan) {
       return {
@@ -179,9 +161,9 @@ export default function PlanDetails() {
         image: "",
         location: "",
         deadlineISO: null,
+        votingClosed: false,
         dateOptions: [],
         activityOptions: [],
-        votingClosed: false,
         winningDates: [],
         winningActivities: [],
         viewerStatus: "not_invited",
@@ -193,25 +175,25 @@ export default function PlanDetails() {
     const image = plan.image_url || plan.image || "";
     const location = plan.location || plan.place || "";
 
-    // Deadline
+    // deadline and closed flag
     const deadlineISO = plan.deadline || plan.voting_deadline || null;
-    const deadlineDate = deadlineISO ? new Date(deadlineISO) : null;
-    const votingClosed = deadlineDate ? now > deadlineDate : false;
+    const closed = deadlineISO ? now > new Date(deadlineISO) : false;
+    const votingClosed = closed;
 
-    // ----- DATE/TIME options -----
+    // ----- Date & Time options (with suggestions) -----
     let dateOptions = [];
     if (Array.isArray(plan.dates) && plan.dates.length) {
       dateOptions = plan.dates
         .map((d) => {
           if (typeof d === "string") {
-            return { date: d.slice(0, 10), time: plan.time || "", votes: 0 };
+            return { date: d.slice(0, 10), time: plan.time || "", votes: Number(d.vote_count) || 0 };
           }
           const dateStr = String(d?.date || d?.name || "").slice(0, 10);
           const timeStr = String(d?.time || "").slice(0, 5) || plan.time || "";
           return {
             date: dateStr,
             time: timeStr,
-            votes: typeof d?.votes === "number" ? d.votes : 0,
+            votes: Number(d?.vote_count) || Number(d?.votes) || 0,
             suggested_by: d?.suggested_by || d?.by || null,
           };
         })
@@ -236,12 +218,12 @@ export default function PlanDetails() {
     }
     dateOptions = Array.from(dateMap.values()).sort(byVotesDesc);
 
-    // ----- ACTIVITY options -----
+    // ----- Activity & Location options (with suggestions) -----
     let activityOptions = Array.isArray(plan.activities)
       ? plan.activities.map((a) => ({
           name: typeof a === "string" ? a : a?.name || "Activity",
           location: typeof a === "string" ? "" : a?.location || "",
-          votes: typeof a?.votes === "number" ? a.votes : 0,
+          votes: Number(a?.vote_count) || Number(a?.votes) || 0,
           suggested_by: a?.suggested_by || a?.by || null,
         }))
       : [];
@@ -255,28 +237,29 @@ export default function PlanDetails() {
     }
     activityOptions = Array.from(actMap.values()).sort(byVotesDesc);
 
+    // winners (ties allowed) after deadline
     const topDateVotes = maxVotes(dateOptions);
     const topActVotes = maxVotes(activityOptions);
     const winningDates =
-      topDateVotes > 0 ? dateOptions.filter((x) => (x.votes || 0) === topDateVotes) : [];
+      votingClosed && topDateVotes > 0
+        ? dateOptions.filter((x) => (x.votes || 0) === topDateVotes)
+        : [];
     const winningActivities =
-      topActVotes > 0 ? activityOptions.filter((x) => (x.votes || 0) === topActVotes) : [];
+      votingClosed && topActVotes > 0
+        ? activityOptions.filter((x) => (x.votes || 0) === topActVotes)
+        : [];
 
-    // ----- Viewer status -----
+    // viewer status
     let viewerStatus = "not_invited";
     let viewerInviteToken = null;
-
     const hostId = plan.host_id || plan.hostId;
+
     if (viewer && viewer.id && hostId && viewer.id === hostId) {
       viewerStatus = "host";
     } else if (Array.isArray(plan.invitations)) {
-      // invitations items may look like:
-      // { invitee_id, invitee_email, status: 'pending'|'responded', token? }
       const match = plan.invitations.find((inv) => {
         if (!inv) return false;
-        // prefer id match, fallback to email match if present
-        const byId =
-          viewer && viewer.id && (inv.invitee_id === viewer.id || inv.inviteeId === viewer.id);
+        const byId = viewer && viewer.id && (inv.invitee_id === viewer.id || inv.inviteeId === viewer.id);
         const byEmail =
           viewer &&
           viewer.email &&
@@ -284,15 +267,10 @@ export default function PlanDetails() {
           inv.invitee_email.toLowerCase() === viewer.email.toLowerCase();
         return byId || byEmail;
       });
-
       if (match) {
         const st = (match.status || "").toLowerCase();
-        if (st === "responded") viewerStatus = "responded";
-        else if (st === "pending") viewerStatus = "pending";
-        else viewerStatus = "pending"; // default to pending if unknown
-        if (typeof match.token === "string" && match.token) {
-          viewerInviteToken = match.token;
-        }
+        viewerStatus = st === "responded" ? "responded" : "pending";
+        if (typeof match.token === "string" && match.token) viewerInviteToken = match.token;
       }
     }
 
@@ -301,9 +279,9 @@ export default function PlanDetails() {
       image,
       location,
       deadlineISO,
+      votingClosed,
       dateOptions,
       activityOptions,
-      votingClosed,
       winningDates,
       winningActivities,
       viewerStatus,
@@ -351,7 +329,7 @@ export default function PlanDetails() {
   return (
     <div className="flex items-start justify-center p-4">
       <Card className="w-full max-w-4xl overflow-hidden">
-        {/* Banner */}
+        {/* Banner (same visual style as before) */}
         {isHttps(image) ? (
           <div
             className="h-56 w-full bg-center bg-cover"
@@ -364,7 +342,7 @@ export default function PlanDetails() {
           </div>
         )}
 
-        {/* Header */}
+        {/* Header row */}
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -376,33 +354,26 @@ export default function PlanDetails() {
                     {location}
                   </span>
                 ) : (
-                  <span className="opacity-70">Location TBD</span>
+                  //TBD
+                  <span className="opacity-70"></span>
                 )}
               </CardDescription>
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              {/* Your Status badge */}
               <StatusBadge kind={viewerStatus} />
-
-              {/* Voting deadline chip */}
-              {plan.deadline || plan.voting_deadline ? (
+              {deadlineISO ? (
                 <span
                   className={[
                     "text-xs px-2 py-1 rounded border",
-                    (plan.deadline && new Date(plan.deadline) < new Date()) ||
-                    (plan.voting_deadline && new Date(plan.voting_deadline) < new Date())
+                    votingClosed
                       ? "bg-green-50 border-green-300 text-green-700"
                       : "bg-amber-50 border-amber-300 text-amber-700",
                   ].join(" ")}
                   title="Voting deadline"
                 >
-                  {((plan.deadline && new Date(plan.deadline) < new Date()) ||
-                    (plan.voting_deadline && new Date(plan.voting_deadline) < new Date()))
-                    ? "Voting closed"
-                    : "Voting open"}{" "}
-                  •{" "}
-                  {new Date(plan.deadline || plan.voting_deadline).toLocaleString()}
+                  {votingClosed ? "Voting closed" : "Voting open"} •{" "}
+                  {new Date(deadlineISO).toLocaleString()}
                 </span>
               ) : (
                 <span className="text-xs px-2 py-1 rounded border bg-muted text-foreground/70">
@@ -410,94 +381,89 @@ export default function PlanDetails() {
                 </span>
               )}
 
-              {/* Optional CTA when pending and token available */}
               {viewerStatus === "pending" && viewerInviteToken ? (
                 <Link to={`/respond/${viewerInviteToken}`}>
                   <Button size="sm">Respond now</Button>
                 </Link>
               ) : null}
+
+              <Link to="/calendar">
+                <Button size="sm" variant="outline">
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+              </Link>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-8">
-          {/* ===== Final result (if voting closed) ===== */}
-          {(() => {
-            const deadlineISO = plan.deadline || plan.voting_deadline || null;
-            const closed = deadlineISO ? new Date(deadlineISO) < new Date() : false;
-            if (!closed) return null;
-
-            // compute winners from memo
-            return (
-              <section className="rounded-lg border bg-card">
-                <div className="p-4 flex items-center gap-2 border-b">
-                  <Trophy className="h-5 w-5" />
-                  <div className="font-semibold">Most Popular Choices</div>
-                </div>
-
-                <div className="p-4 grid gap-6 sm:grid-cols-2">
-                  {/* Winning date/time */}
-                  <div>
-                    <div className="text-sm font-medium mb-2 flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4" />
-                      Date & Time
-                    </div>
-                    {winningDates.length ? (
-                      <ul className="text-sm space-y-1">
-                        {winningDates.map((x, i) => (
-                          <li key={i}>
-                            {formatYMD(x.date)}
-                            {x.time ? ` • ${formatTime(x.time)}` : ""}
-                            {typeof x.votes === "number" ? `  (votes: ${x.votes})` : ""}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="text-sm opacity-70">No winning date/time.</div>
-                    )}
-                  </div>
-
-                  {/* Winning activity/location */}
-                  <div>
-                    <div className="text-sm font-medium mb-2">Activity & Location</div>
-                    {winningActivities.length ? (
-                      <ul className="text-sm space-y-1">
-                        {winningActivities.map((a, i) => (
-                          <li key={i}>
-                            {a.name}
-                            {a.location ? ` — ${a.location}` : ""}
-                            {typeof a.votes === "number" ? `  (votes: ${a.votes})` : ""}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="text-sm opacity-70">No winning activity/location.</div>
-                    )}
-                  </div>
-                </div>
-              </section>
-            );
-          })()}
-
-          {/* ===== All options (shows suggested ones too) ===== */}
-          <section className="rounded-lg border bg-card">
-            <div className="p-4 flex items-center gap-2 border-b">
-              <div className="font-semibold">
-                {(plan.deadline && new Date(plan.deadline) < new Date()) ||
-                (plan.voting_deadline && new Date(plan.voting_deadline) < new Date())
-                  ? "All Considered Options"
-                  : "Current Proposals (with Suggestions)"}
+          {/* Winners (appears after deadline) — same section framing */}
+          {votingClosed && (
+            <section className="rounded-lg border bg-card">
+              <div className="p-4 flex items-center gap-2 border-b">
+                <Trophy className="h-5 w-5" />
+                <div className="font-semibold">Most Popular Choices</div>
               </div>
+
+              <div className="p-4 grid gap-6 sm:grid-cols-2">
+                <div>
+                  <div className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4" />
+                    Date & Time
+                  </div>
+                  {winningDates.length ? (
+                    <ul className="text-sm space-y-1">
+                      {winningDates.map((x, i) => (
+                        <li key={i}>
+                          {formatYMD(x.date)}
+                          {x.time ? ` • ${formatTime(x.time)}` : ""}
+                          {typeof x.votes === "number" ? `  (votes: ${x.votes})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-sm opacity-70">No winning date/time.</div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium mb-2">Activity & Location</div>
+                  {winningActivities.length ? (
+                    <ul className="text-sm space-y-1">
+                      {winningActivities.map((a, i) => (
+                        <li key={i}>
+                          {a.name}
+                          {a.location ? ` — ${a.location}` : ""}
+                          {typeof a.votes === "number" ? `  (votes: ${a.votes})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-sm opacity-70">No winning activity/location.</div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Divider to match earlier visual rhythm */}
+          <Separator />
+
+          {/* Proposals (shows original + suggestions) — same 2-column layout */}
+          <section className="rounded-lg border bg-card">
+            <div className="p-4 border-b font-semibold">
+              {votingClosed ? "All Considered Options" : "Current Proposals (with Suggestions)"}
             </div>
 
             <div className="p-4 grid gap-6 sm:grid-cols-2">
-              {/* Date & Time options */}
+              {/* Date & Time */}
               <div>
                 <div className="text-sm font-medium mb-2 flex items-center gap-2">
                   <CalendarDays className="h-4 w-4" />
                   Date & Time
                 </div>
-                {Array.isArray(dateOptions) && dateOptions.length ? (
+                {dateOptions.length ? (
                   <ul className="text-sm space-y-1">
                     {dateOptions.map((x, i) => (
                       <li key={i}>
@@ -515,10 +481,10 @@ export default function PlanDetails() {
                 )}
               </div>
 
-              {/* Activity options */}
+              {/* Activity & Location */}
               <div>
                 <div className="text-sm font-medium mb-2">Activity & Location</div>
-                {Array.isArray(activityOptions) && activityOptions.length ? (
+                {activityOptions.length ? (
                   <ul className="text-sm space-y-1">
                     {activityOptions.map((a, i) => (
                       <li key={i}>
