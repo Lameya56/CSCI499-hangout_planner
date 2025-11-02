@@ -2,7 +2,7 @@ import cron from "node-cron"
 import { pool } from "../config/database.js";
 import { sendPlanConfirmationEmail } from "./emailService.js";
 
-cron.schedule("* * * * *", async () => {
+cron.schedule("*/10 * * * *", async () => {
     console.log("--------------------------testing cron execution--------------------------");
     const startTime = Date.now();
     try {

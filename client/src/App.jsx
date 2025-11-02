@@ -17,6 +17,7 @@ import { AuthProvider } from './AuthContext.jsx'
 import Respond from './pages/Respond.jsx'
 import Reacthook from './pages/Reacthook.jsx'
 import Decide from './pages/Decide.jsx'
+import Groups from './pages/Groups.jsx'
 
 function AppRoutes() {
   let element = useRoutes([
@@ -38,6 +39,8 @@ function AppRoutes() {
         { path: "/plans/:id", element: <PlanDetails /> },
         // { path: "/groups", element:<Groups />},
         // { path: "/memories", element: <Memories/>}
+        { path: "/groups", element:<Groups />},
+        //{ path: "/memories", element: <Memories/>}
         // ... add other protected routes here
       ]
     }
