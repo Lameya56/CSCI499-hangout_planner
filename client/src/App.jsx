@@ -16,6 +16,7 @@ import ProtectedLayout from './components/ProtectedLayout.jsx'
 import { AuthProvider } from './AuthContext.jsx'
 import Respond from './pages/Respond.jsx'
 import Reacthook from './pages/Reacthook.jsx'
+import Decide from './pages/Decide.jsx'
 
 function AppRoutes() {
   let element = useRoutes([
@@ -24,6 +25,7 @@ function AppRoutes() {
     { path: "/signup", element: <SignUp /> },
     { path: "/login", element: <Login /> },
     { path: "/respond/:token", element: <Respond /> },
+    { path: "/decide/:token", element: <Decide /> },
     
     // Protected routes nested under a layout
     {
