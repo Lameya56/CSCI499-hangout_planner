@@ -45,6 +45,9 @@ PGPORT=5432
 PGUSER=postgres  
 PGPASSWORD=yourpassword  
 JWT_SECRET=yourjwtsecret  
+FRONTEND_URL=http://localhost:5173  
+EMAIL_USER=letsgo.noreply.bot@gmail.com  
+EMAIL_PASSWORD=pwfp mbjc sxpd fhag  
 
 ## finally run npm start in ur terminal
 npm start --> to start server on localhost:3001

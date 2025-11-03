@@ -222,36 +222,69 @@ const Respond = () => {
             <div>
               <Label className="text-lg font-semibold mb-3 block">Which dates work for you? <span className="text-red-500">*</span></Label>
               <p className="text-sm text-gray-500 mb-3">Select all dates you're available</p>
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 {plan.dates?.map((date) => (
-                  <div key={date.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => handleDateToggle(date.id)}>
-                    <Input type="checkbox" checked={selectedDates.includes(date.id)} onChange={() => handleDateToggle(date.id)} />
-                    <Label className="flex-1 cursor-pointer">
-                      {new Date(date.date).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
-                      <span className="text-sm text-gray-500 ml-2">({date.vote_count} {date.vote_count === 1 ? 'vote' : 'votes'})</span>
+                  <div
+                    key={date.id}
+                    className="flex items-center gap-2 border rounded-lg px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleDateToggle(date.id)}
+                  >
+                    <Label className="flex items-center gap-2 cursor-pointer">
+                      <Input
+                        type="checkbox"
+                        checked={selectedDates.includes(date.id)}
+                        onChange={() => handleDateToggle(date.id)}
+                        className="w-5 h-5"
+                      />
+                      <span>
+                        {new Date(date.date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                        <span className="text-sm text-gray-500 ml-2">
+                          ({date.vote_count} {date.vote_count === 1 ? 'vote' : 'votes'})
+                        </span>
+                      </span>
                     </Label>
                   </div>
                 ))}
               </div>
+
             </div>
 
             {/* Activities */}
             <div>
               <Label className="text-lg font-semibold mb-3 block">What activities interest you? <span className="text-red-500">*</span></Label>
               <p className="text-sm text-gray-500 mb-3">Select all activities you'd enjoy</p>
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 {plan.activities?.map((activity) => (
-                  <div key={activity.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => handleActivityToggle(activity.id)}>
-                    <Input type="checkbox" checked={selectedActivities.includes(activity.id)} onChange={() => handleActivityToggle(activity.id)} />
-                    <div className="flex-1">
-                      <Label className="cursor-pointer font-medium">{activity.name}</Label>
-                      <p className="text-sm text-gray-500">📍 {activity.location}</p>
-                      {activity.suggested_by_name && <p className="text-xs text-blue-500">Suggested by {activity.suggested_by_name}</p>}
-                      <p className="text-xs text-gray-400">({activity.vote_count} {activity.vote_count === 1 ? 'vote' : 'votes'})</p>
-                    </div>
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-2 border rounded-lg px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleActivityToggle(activity.id)}
+                  >
+                    <Input
+                      type="checkbox"
+                      checked={selectedActivities.includes(activity.id)}
+                      onChange={() => handleActivityToggle(activity.id)}
+                      className="w-5 h-5"
+                    />
+                    <Label className="flex-1 flex items-center gap-2 cursor-pointer">
+                      <span className="font-medium">{activity.name}</span>
+                      <span className="text-sm text-gray-500">📍 {activity.location}</span>
+                      {activity.suggested_by_name && (
+                        <span className="text-xs text-blue-500">Suggested by {activity.suggested_by_name}</span>
+                      )}
+                      <span className="text-xs text-gray-400">
+                        ({activity.vote_count} {activity.vote_count === 1 ? 'vote' : 'votes'})
+                      </span>
+                    </Label>
                   </div>
                 ))}
               </div>
+
             </div>
 
             {/* Add new activity */}
@@ -266,7 +299,12 @@ const Respond = () => {
                   </div>
                 </div>
               ))}
-              <Button type="button" variant="secondary" onClick={addNewActivityField}>+ Add another</Button>
+              <Button className="gap-2 m-4"
+              type="button" 
+              variant="secondary" 
+              onClick={addNewActivityField}>
+                + Add another
+              </Button>
             </div>
           </CardContent>
 

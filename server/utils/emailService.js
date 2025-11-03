@@ -1,4 +1,4 @@
-// TESTING VERSION - Just logs to console
+//TESTING VERSION - Just logs to console
 export const sendInvitationEmail = async (invitation, plan, planTitle) => {
   const inviteLink = `${process.env.FRONTEND_URL}/respond/${invitation.invite_token}`;
   
@@ -17,8 +17,8 @@ export const sendInvitationEmail = async (invitation, plan, planTitle) => {
 };
 
 
-// // utils/emailService.js (COMPLETE VERSION)
-// import nodemailer from 'nodemailer';
+// utils/emailService.js (COMPLETE VERSION)
+//import nodemailer from 'nodemailer';
 
 // const transporter = nodemailer.createTransport({
 //   service: 'gmail',
@@ -102,64 +102,64 @@ export const sendInvitationEmail = async (invitation, plan, planTitle) => {
 //   }
 // };
 
-// export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, confirmedActivity) => {
-//   const mailOptions = {
-//     from: process.env.EMAIL_USER,
-//     to: email,
-//     subject: `✅ Plan Confirmed: ${plan.title}`,
-//     html: `
-//       <!DOCTYPE html>
-//       <html>
-//       <head>
-//         <style>
-//           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-//           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-//           .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
-//           .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-//           .details { background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
-//           .button { display: inline-block; background: #10b981; color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
-//         </style>
-//       </head>
-//       <body>
-//         <div class="container">
-//           <div class="header">
-//             <h1>🎉 Plan Confirmed!</h1>
-//             <h2>${plan.title}</h2>
-//           </div>
-//           <div class="content">
-//             <p>Great news! The plan has been finalized based on everyone's votes.</p>
+export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, confirmedActivity, invite_token) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `✅ Plan Confirmed: ${plan.title}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .details { background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+          .button { display: inline-block; background: #10b981; color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Plan Confirmed!</h1>
+            <h2>${plan.title}</h2>
+          </div>
+          <div class="content">
+            <p>Great news! The plan has been finalized based on everyone's votes.</p>
             
-//             <div class="details">
-//               <h3>📅 Event Details:</h3>
-//               <p><strong>Date:</strong> ${new Date(confirmedDate).toLocaleDateString('en-US', { 
-//                 weekday: 'long', 
-//                 year: 'numeric', 
-//                 month: 'long', 
-//                 day: 'numeric' 
-//               })}</p>
-//               <p><strong>Time:</strong> ${plan.time}</p>
-//               <p><strong>Activity:</strong> ${confirmedActivity.name}</p>
-//               <p><strong>Location:</strong> ${confirmedActivity.location}</p>
-//             </div>
+            <div class="details">
+              <h3>📅 Event Details:</h3>
+              <p><strong>Date:</strong> ${new Date(confirmedDate).toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</p>
+              <p><strong>Time:</strong> ${plan.time}</p>
+              <p><strong>Activity:</strong> ${confirmedActivity.name}</p>
+              <p><strong>Location:</strong> ${confirmedActivity.location}</p>
+            </div>
             
-//             <p>A group chat has been created for everyone attending. Log in to start chatting with your friends!</p>
+            <p>Click below to give your decision on the finalized plan:</p>
             
-//             <div style="text-align: center;">
-//               <a href="${process.env.FRONTEND_URL}/groups" class="button">
-//                 Go to Group Chat
-//               </a>
-//             </div>
-//           </div>
-//         </div>
-//       </body>
-//       </html>
-//     `
-//   };
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL}/decide/${invite_token}" class="button">
+                Click
+              </a>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
 
-//   try {
-//     await transporter.sendMail(mailOptions);
-//     console.log(`✅ Confirmation email sent to ${email}`);
-//   } catch (error) {
-//     console.error('❌ Error sending confirmation email:', error);
-//   }
-// };
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Confirmation email sent to ${email}`);
+  } catch (error) {
+    console.error('❌ Error sending confirmation email:', error);
+  }
+};

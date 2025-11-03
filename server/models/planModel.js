@@ -129,6 +129,36 @@ export const updatePlanStatus = async (planId, status, confirmedDate = null, con
   return result.rows[0];
 };
 
+export const updatePlanDetails = async (planId, updates) => {
+  const { title, time, image_url, deadline } = updates;
+  
+  const result = await pool.query(
+    `UPDATE plans
+      SET
+        title = COALESCE($1, title),
+        time = COALESCE($2, time),
+        image_url = COALESCE($3, image_url),
+        deadline = COALESCE($4, deadline),
+        updated_at = NOW()
+      WHERE id = $5
+      RETURNING *`,
+    [title, time, image_url, deadline, planId]
+  );
+
+  return result.rows[0];
+}
+
 export const deletePlan = async (planId) => {
-  await pool.query('DELETE FROM plans WHERE id = $1', [planId]);
+  // await pool.query('DELETE FROM plans WHERE id = $1', [planId]);
+  const result = await pool.query(
+    `UPDATE plans 
+     SET status = 'cancelled'
+     WHERE id = $1
+     RETURNING *`,
+    [planId]
+  );
+
+  console.log(req.user.name);
+  
+  return result.rows[0];
 };
