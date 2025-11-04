@@ -149,13 +149,13 @@ const Plan = () => {
                             <Label htmlFor="date">Add a date:</Label>
                             {dateFields.map((field, index) => (
                                 <div key={field.id} className="flex gap-2">
-                                <Label className="flex items-center gap-2">
+                                {/* <Label className="flex items-center gap-2">
                                     <Input
                                     type="checkbox"
                                     className={"w-4 h-4"}
                                     {...register(`dates.${index}.selected`)}
                                 />
-                                </Label>
+                                </Label> */}
                                 <Input
                                 {...register(`dates.${index}.name`, {
                                     required: {value: true, message: "this is requried"}}, {ValueAsDate: true})}
@@ -260,13 +260,13 @@ const Plan = () => {
                                 {activityFields.map((field, index) => (
                                     <div key={field.id} className="flex gap-2">
                                     {/* checkbox */}
-                                    <Label className="flex items-center gap-2">
+                                    {/* <Label className="flex items-center gap-2">
                                         <Input
                                             type="checkbox"
                                             className={"w-4 h-4"}
                                             {...register(`activities.${index}.selected`)}
                                         />
-                                    </Label>
+                                    </Label> */}
                                     {/* activity name input */}
                                     <Input
                                         {...register(`activities.${index}.name`, { required: true })}

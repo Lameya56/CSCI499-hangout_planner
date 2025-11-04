@@ -18,6 +18,8 @@ import Respond from './pages/Respond.jsx'
 import Reacthook from './pages/Reacthook.jsx'
 import Decide from './pages/Decide.jsx'
 import Groups from './pages/Groups.jsx'
+import Explore from './pages/Explore.jsx'
+import ExploreDetails from './pages/ExploreDetails.jsx'
 
 function AppRoutes() {
   let element = useRoutes([
@@ -37,10 +39,11 @@ function AppRoutes() {
         { path: "/plan", element: <Plan /> },
         { path: "/calendar", element: <Calendar /> },
         { path: "/plans/:id", element: <PlanDetails /> },
-        // { path: "/groups", element:<Groups />},
+        { path: "/groups", element: <Groups /> },
         // { path: "/memories", element: <Memories/>}
-        { path: "/groups", element:<Groups />},
-        //{ path: "/memories", element: <Memories/>}
+        { path: "/explore", element: <Explore /> },
+        { path: "/explore/:id", element: <ExploreDetails /> },
+        
         // ... add other protected routes here
       ]
     }

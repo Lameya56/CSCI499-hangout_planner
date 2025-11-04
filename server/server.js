@@ -16,7 +16,6 @@ import groupRoutes from './routes/groupRoutes.js';
 
 
 
-
 const app = express()
 const server = createServer(app);
 const io = new Server(server, {
