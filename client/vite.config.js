@@ -12,18 +12,17 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../server/public', //this is putting the built files in express app
+    outDir: '../server/public', // this builds your frontend into your Express public folder
     emptyOutDir: true
   },
   server: {
+    host: "0.0.0.0", // ✅ makes your app accessible from outside EC2
+    port: 5173,      // (optional) specify port if needed
     proxy: {
-      //all api requests that start with /api will be sent to the backend
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://18.216.222.0:3001', // ✅ point to your backend API
         changeOrigin: true,
       }
     }
   }
-  
-  
 })
