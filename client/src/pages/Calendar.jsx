@@ -1,3 +1,4 @@
+// client/src/pages/Calendar.jsx
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -30,9 +31,9 @@ function ymdToLocalDate(ymd /* 'YYYY-MM-DD' */) {
   if (!y || !m || !d) return null;
   return new Date(y, m - 1, d);
 }
-function formatYMD(ymd, opts) {
-  const dt = ymdToLocalDate(ymd);
-  if (!dt) return ymd || "";
+function formatYMD(ymdStr, opts) {
+  const dt = ymdToLocalDate(ymdStr);
+  if (!dt) return ymdStr || "";
   return dt.toLocaleDateString(
     undefined,
     opts || { year: "numeric", month: "long", day: "numeric" }
@@ -60,37 +61,108 @@ function getMonthGrid(year, month) {
   return [...leading, ...current, ...trailing];
 }
 
-// Load from API and flatten into calendar rows
+/* ==== Pick the winning date from a plan's detailed dates (after deadline) ==== */
+function pickWinningDateFromDates(dates = []) {
+  // dates may have fields: { id, date: 'YYYY-MM-DD...', vote_count?, votes? }
+  if (!Array.isArray(dates) || dates.length === 0) return null;
+  // Normalize to {dateStr, votes}
+  const norm = dates
+    .map((d) => ({
+      dateStr: String(d?.date || d?.name || "").slice(0, 10),
+      votes: Number(d?.vote_count ?? d?.votes ?? 0),
+    }))
+    .filter((x) => x.dateStr);
+
+  if (norm.length === 0) return null;
+
+  // Find max votes
+  const maxVotes = norm.reduce((m, x) => Math.max(m, x.votes), 0);
+  const top = norm.filter((x) => x.votes === maxVotes);
+
+  // Tie-breaker: earliest date
+  const winner = top.sort((a, b) => (a.dateStr < b.dateStr ? -1 : a.dateStr > b.dateStr ? 1 : 0))[0];
+  return winner?.dateStr || null;
+}
+
+/* ==== Load and derive the single display date per plan (deadline → winning date after) ==== */
 function useCalendarDays() {
-  const [rows, setRows] = useState([]);
-
-  const normalizeFromPlans = (plans = []) => {
-    const out = [];
-    for (const p of plans) {
-      const id = p.id || p.plan_id;
-      const title = p.title || p.eventTitle || "Untitled Plan";
-      const image = p.image || p.image_url || "";
-      const rawDates = Array.isArray(p.dates)
-        ? p.dates.map((d) => (typeof d === "string" ? d : d?.name || d?.date))
-        : [p.hangoutDate || p.date || p.deadline];
-
-      for (const d of rawDates.filter(Boolean)) {
-        const dateStr = String(d).slice(0, 10); // keep as Y-M-D string (no Date parsing)
-        if (dateStr) out.push({ planId: id, date: dateStr, title, image });
-      }
-    }
-    return out;
-  };
+  const [rows, setRows] = useState([]); // [{ planId, date, title, image }]
 
   const load = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/plans", {
+      const listRes = await fetch("/api/plans", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to load plans");
-      const json = await res.json();
-      setRows(normalizeFromPlans(json.plans || []));
+      if (!listRes.ok) throw new Error("Failed to load plans");
+      const listJson = await listRes.json();
+      const plans = Array.isArray(listJson.plans) ? listJson.plans : [];
+
+      const now = new Date();
+
+      // Build rows: default to deadline if not passed; else pick most popular date.
+      const outputs = [];
+
+      // First pass: compute which plans need details
+      const needDetail = [];
+      for (const p of plans) {
+        const id = p.id || p.plan_id;
+        const title = p.title || p.eventTitle || "Untitled Plan";
+        const image = p.image || p.image_url || "";
+
+        const deadlineISO = p.deadline || p.voting_deadline || "";
+        const deadlineStr = deadlineISO ? String(deadlineISO).slice(0, 10) : "";
+
+        const deadlinePassed = deadlineISO ? new Date(deadlineISO) < now : false;
+
+        if (!deadlinePassed) {
+          // until deadline → display on deadline
+          if (deadlineStr) {
+            outputs.push({ planId: id, date: deadlineStr, title, image });
+          }
+        } else {
+          // after deadline → try to pick a winning date from list data if available
+          // if list item already has vote counts on dates, we can compute locally
+          let winnerDate = null;
+
+          if (Array.isArray(p.dates) && p.dates.length) {
+            winnerDate = pickWinningDateFromDates(p.dates);
+          }
+
+          if (winnerDate) {
+            outputs.push({ planId: id, date: winnerDate, title, image });
+          } else {
+            // Need detail fetch to compute winner
+            needDetail.push({ id, title, image });
+          }
+        }
+      }
+
+      // Fetch details only for those we couldn't resolve winner from list
+      if (needDetail.length) {
+        const token = localStorage.getItem("token");
+        const detailPromises = needDetail.map(async ({ id, title, image }) => {
+          try {
+            const res = await fetch(`/api/plans/${id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) return null;
+            const json = await res.json();
+            const dates = json?.plan?.dates || [];
+            const winner = pickWinningDateFromDates(dates);
+            return winner ? { planId: id, date: winner.slice(0, 10), title, image } : null;
+          } catch {
+            return null;
+          }
+        });
+
+        const details = await Promise.all(detailPromises);
+        for (const row of details) {
+          if (row && row.date) outputs.push(row);
+        }
+      }
+
+      setRows(outputs);
     } catch {
       setRows([]);
     }
@@ -101,9 +173,11 @@ function useCalendarDays() {
     const onUpdated = () => load();
     const onStorage = (e) => e.key === "token" && load();
     window.addEventListener("plans:updated", onUpdated);
+    window.addEventListener("votes:submitted", onUpdated);
     window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener("plans:updated", onUpdated);
+      window.removeEventListener("votes:submitted", onUpdated);
       window.removeEventListener("storage", onStorage);
     };
   }, [load]);
@@ -152,7 +226,7 @@ export default function Calendar() {
   const goPrevYear = () => setViewYear((y) => y - 1);
   const goNextYear = () => setViewYear((y) => y + 1);
 
-  // Fixed-position arrows via fixed-width month label
+  // Fixed-position arrows via fixed-width month label (unchanged)
   const MonthControls = (
     <div className="grid grid-cols-[2rem,10rem,2rem] items-center gap-2">
       <Button
@@ -323,24 +397,26 @@ export default function Calendar() {
         </CardContent>
       </Card>
 
-      {/* MULTI-PLAN CHOOSER */}
+      {/* MULTI-PLAN CHOOSER (now scrollable for many events) */}
       <Sheet open={chooserOpen} onOpenChange={setChooserOpen}>
-        <SheetContent side="right" className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>
-              {chooserDate ? formatYMD(chooserDate) : "Select a plan"}
-            </SheetTitle>
-            <SheetDescription>Multiple plans on this day. Pick one:</SheetDescription>
-          </SheetHeader>
+        <SheetContent side="right" className="sm:max-w-md p-0">
+          <div className="p-6 border-b">
+            <SheetHeader>
+              <SheetTitle>
+                {chooserDate ? formatYMD(chooserDate) : "Select a plan"}
+              </SheetTitle>
+              <SheetDescription>Multiple plans on this day. Pick one:</SheetDescription>
+            </SheetHeader>
+          </div>
 
-          <div className="mt-4 space-y-3">
+          {/* Scrollable list */}
+          <div className="max-h-[70vh] overflow-y-auto p-6 space-y-3">
             {chooserPlans.map((p, i) => (
               <button
                 key={`${p.planId}-${i}`}
                 onClick={() => navigate(`/plans/${p.planId}`)}
                 className="w-full text-left border rounded-md overflow-hidden hover:bg-accent transition focus-visible:ring-2 focus-visible:ring-ring/50 outline-none"
               >
-                {/* thumbnail */}
                 {/^(https):\/\//i.test(p.image) ? (
                   <div
                     className="h-24 w-full bg-center bg-cover"
@@ -357,6 +433,9 @@ export default function Calendar() {
                 </div>
               </button>
             ))}
+            {chooserPlans.length === 0 && (
+              <div className="text-sm opacity-70">No plans for this day.</div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
