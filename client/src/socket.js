@@ -1,6 +1,12 @@
+// src/socket.js
 import { io } from "socket.io-client";
-export const socket = io("http://localhost:3001", {
-  transports: ["websocket"], 
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
+
+const SOCKET_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3001" // local dev
+    : "http://100.115.50.55:3001"; // your EC2/Tailscale server port
+
+export const socket = io(SOCKET_URL, {
+  transports: ["websocket"],
+  withCredentials: true,
 });

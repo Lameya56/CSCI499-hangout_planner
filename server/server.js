@@ -20,7 +20,7 @@ const app = express()
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: ["http://35.92.203.139:5173"],
     methods: ["GET", "POST"],
   }, 
 });
@@ -55,7 +55,7 @@ io.on("connection", (socket) => {
 
 
 
-app.use(cors({ origin: "http://localhost:5173", credentials: true }))
+app.use(cors({ origin: ["http://35.92.203.139:5173"], credentials: true }))
 app.use(express.json())
 // Routes
 app.get('/', (req, res) => {
@@ -72,6 +72,6 @@ const PORT = process.env.PORT || 3001
 
 
 
-server.listen(PORT, () => {
-    console.log(`🚀 Server listening on http://localhost:${PORT}`)
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server listening on http://35.92.203.139:${PORT}`)
 })
