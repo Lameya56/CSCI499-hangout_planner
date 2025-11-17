@@ -24,7 +24,8 @@ export const createInvitations = async (planId, invitees) => {
 
 export const getInvitationByToken = async (token) => {
   const result = await pool.query(
-    `SELECT i.*, p.*, u.name as host_name
+    `SELECT i.*, p.*, u.name as host_name,
+            i.id as invitation_id  
      FROM invitations i
      JOIN plans p ON i.plan_id = p.id
      JOIN users u ON p.host_id = u.id

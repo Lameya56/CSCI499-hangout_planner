@@ -1,4 +1,4 @@
-import {Home, Inbox, Calendar, Search, Settings, UsersRoundIcon, Images, LandPlot} from "lucide-react";
+import {Home, Inbox, Calendar, Search, Settings, UsersRoundIcon, Images, LandPlot, Globe} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -38,6 +38,11 @@ const items = [
         title: "Memories",
         url: "/memories",
         icon: Images,
+    },
+    {
+        title: "Explore",
+        url: "/explore",
+        icon: Globe,
     },
 ]
 const AppSideBar = () => {

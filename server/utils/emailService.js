@@ -1,4 +1,4 @@
-// TESTING VERSION - Just logs to console
+//TESTING VERSION - Just logs to console
 // export const sendInvitationEmail = async (invitation, plan, planTitle) => {
 //   const inviteLink = `${process.env.FRONTEND_URL}/respond/${invitation.invite_token}`;
   
@@ -102,7 +102,17 @@ export const sendInvitationEmail = async (invitation, plan, planTitle) => {
   }
 };
 
-export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, confirmedActivity, invite_token) => {
+/**
+ * Sends a plan confirmation email.
+ * @param {string} email - Recipient's email.
+ * @param {object} plan - The plan object.
+ * @param {string} confirmedDate - The confirmed date string.
+ * @param {object} confirmedActivity - The confirmed activity object.
+ * @param {string} invite_token - The invitee's token (null for host).
+ * @param {boolean} isHost - Flag to hide respond button for the host.
+ */
+export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, confirmedActivity, invite_token, isHost = false) => {
+  const decideLink = `${process.env.FRONTEND_URL}/decide/${invite_token}`;
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -141,14 +151,16 @@ export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, conf
               <p><strong>Activity:</strong> ${confirmedActivity.name}</p>
               <p><strong>Location:</strong> ${confirmedActivity.location}</p>
             </div>
-            
-            <p>Click below to give your decision on the finalized plan:</p>
-            
+            ${!isHost ? `
+            <p>Click below to give your decision on the finalized plan:</p>   
             <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL}/decide/${invite_token}" class="button">
+              <a href="${decideLink}" class="button">
                 Click
               </a>
             </div>
+            `:`
+            <p style="text-align:center; font-style: italic;">As the host, your attendance is already confirmed. Enjoy!</p>
+            `}
           </div>
         </div>
       </body>
@@ -161,5 +173,112 @@ export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, conf
     console.log(`✅ Confirmation email sent to ${email}`);
   } catch (error) {
     console.error('❌ Error sending confirmation email:', error);
+  }
+
+};
+/**
+ * Sends a reminder to vote.
+ */
+export const sendReminderEmail = async (email, planTitle, deadline, inviteLink) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `⏰ Reminder: Don't forget to vote for ${planTitle}!`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #667eea;">Just a friendly reminder!</h2>
+        <p>This is a reminder to cast your votes for the plan: <strong>${planTitle}</strong>.</p>
+        <p>The deadline for voting is <strong>${new Date(deadline).toLocaleString()}</strong>, so make sure to get your votes in soon!</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${inviteLink}" style="background: #667eea; color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Vote Now
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #777;">If you can't click the button, copy this link: <br> ${inviteLink}</p>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Reminder email sent to ${email}`);
+  } catch (error) {
+    console.error('❌ Error sending reminder email:', error);
+  }
+
+};
+
+/**
+ * Sends a countdown email.
+ */
+export const sendCountdownEmail = async (email, plan, activity, daysRemaining) => {
+  let subject = '';
+  let heading = '';
+  let message = '';
+
+  const eventDateStr = new Date(plan.confirmed_date).toLocaleDateString('en-US', { 
+    weekday: 'long', month: 'long', day: 'numeric' 
+  });
+
+  switch (daysRemaining) {
+    case 7:
+      subject = `🗓️ 1 Week Away: ${plan.title}!`;
+      heading = `Only 1 Week Left!`;
+      message = `Get ready! Our plan, <strong>${plan.title}</strong>, is just one week away, on ${eventDateStr}.`;
+      break;
+    case 3:
+      subject = `🎉 3 Days Away: ${plan.title}!`;
+      heading = `Just 3 Days to Go!`;
+      message = `The excitement is building! <strong>${plan.title}</strong> is happening in 3 days on ${eventDateStr}.`;
+      break;
+    case 2:
+      subject = `🤩 2 Days Away: ${plan.title}!`;
+      heading = `Only 2 Days Left!`;
+      message = `Almost time! <strong>${plan.title}</strong> is happening in 2 days on ${eventDateStr}.`;
+      break;
+    case 1:
+      subject = `✨ Tomorrow: ${plan.title}!`;
+      heading = `It's (Almost) Here!`;
+      message = `<strong>${plan.title}</strong> is TOMORROW, ${eventDateStr}! We hope you're as excited as we are.`;
+      break;
+    case 0:
+      subject = `🙌 Today is the Day: ${plan.title}!`;
+      heading = `Today's the Day!`;
+      message = `It's finally here! <strong>${plan.title}</strong> is happening today. See you there!`;
+      break;
+    default:
+      return; // Don't send if not a milestone
+  }
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1>${heading}</h1>
+          <h2>${plan.title}</h2>
+        </div>
+        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 1.1em;">${message}</p>
+          <div style="background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <h3>📅 Event Details:</h3>
+            <p><strong>Date:</strong> ${eventDateStr}</p>
+            <p><strong>Time:</strong> ${plan.time}</p>
+            <p><strong>Activity:</strong> ${activity.name}</p>
+            <p><strong>Location:</strong> ${activity.location}</p>
+          </div>
+          <p style="text-align:center; font-style: italic; color: #555;">Get ready for a great time!</p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ ${daysRemaining}-day countdown email sent to ${email}`);
+  } catch (error) {
+    console.error(`❌ Error sending ${daysRemaining}-day countdown email:`, error);
   }
 };

@@ -76,6 +76,21 @@ CREATE TABLE IF NOT EXISTS activity_votes(
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(activity_id, user_id)
 );
+
+
+CREATE TABLE IF NOT EXISTS chat(
+    id BIGSERIAL PRIMARY KEY NOT NULL,
+    plan_id BIGINT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    time_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS group_messages(
+    id BIGSERIAL PIMARY KEY NOT NULL,
+    
+
+);
 -- add the tables upto here the below ones are still being decided/ u can test or add them and update us. 
 
 -- -- Change suggestions

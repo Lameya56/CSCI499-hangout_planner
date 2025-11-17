@@ -24,7 +24,7 @@ export const registerUser = async (req, res) => {
 
     // Generate token immediately so they can login after signup
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email , name: user.name},
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -50,7 +50,7 @@ export const loginUser = async (req, res) => {
     //NEW: Link any pending invitations
     await linkInvitationToUser(user.id, email);
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email , name: user.name},
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );

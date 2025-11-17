@@ -28,26 +28,15 @@ const SignUp = () => {
             });
             const result = await res.json();
             console.log(result);
-
-            // if (res.ok) {
-            //     // Redirect to login page after successful signup
-            //     navigate("/login");
-            // } else {
-            //     alert(result.message);
-            // }
-            if (res.ok) {
-                // ✅ Store token immediately
-                if (result.token) {
-                localStorage.setItem('token', result.token);
-                }
+        if (res.ok) {
                 
-                alert('Account created successfully!');
+                alert('Account created successfully! Please log in.');
                 
-                // ✅ Redirect to invitation if that's where they came from
+                // ✅ ADDED: Redirect to login, passing the 'redirect' param if it exists
                 if (redirectTo) {
-                navigate(redirectTo);
+                    navigate(`/login?redirect=${redirectTo}`);
                 } else {
-                navigate('/home');
+                    navigate('/login');
                 }
             } else {
                 alert(result.message || 'Signup failed');
