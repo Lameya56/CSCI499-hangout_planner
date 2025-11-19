@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -91,6 +91,7 @@ function StatusBadge({ kind }) {
 
 export default function PlanDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [plan, setPlan] = useState(null);
   const [viewer, setViewer] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -139,6 +140,32 @@ export default function PlanDetails() {
       window.removeEventListener("votes:submitted", onRefresh);
     };
   }, [id]);
+
+  // Cancel plan (mark status = 'cancelled') - only host sees this button
+  const handleCancel = async () => {
+    if (!window.confirm('Are you sure you want to cancel this plan? This cannot be undone.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/plans/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json.message || 'Failed to cancel plan');
+      }
+
+      // Notify other parts of the app and navigate away
+      window.dispatchEvent(new Event('plans:updated'));
+      navigate('/calendar');
+    } catch (e) {
+      alert(e.message || 'Failed to cancel plan');
+    }
+  };
 
   const now = new Date();
 
@@ -385,6 +412,12 @@ export default function PlanDetails() {
                 <Link to={`/respond/${viewerInviteToken}`}>
                   <Button size="sm">Respond now</Button>
                 </Link>
+              ) : null}
+
+              {viewerStatus === 'host' ? (
+                <Button size="sm" variant="destructive" onClick={handleCancel}>
+                  Cancel Plan
+                </Button>
               ) : null}
 
               <Link to="/calendar">

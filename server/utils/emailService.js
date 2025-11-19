@@ -102,6 +102,18 @@ export const sendInvitationEmail = async (invitation, plan, planTitle) => {
   }
 };
 
+const formatTime = (t) => {
+  const [h, m] = t.split(":");
+  const d = new Date();
+  d.setHours(h, m);
+
+  return d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 /**
  * Sends a plan confirmation email.
  * @param {string} email - Recipient's email.
@@ -147,7 +159,7 @@ export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, conf
                 month: 'long', 
                 day: 'numeric' 
               })}</p>
-              <p><strong>Time:</strong> ${plan.time}</p>
+              <p><strong>Time:</strong> ${formatTime(plan.time)}</p>
               <p><strong>Activity:</strong> ${confirmedActivity.name}</p>
               <p><strong>Location:</strong> ${confirmedActivity.location}</p>
             </div>
@@ -176,6 +188,7 @@ export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, conf
   }
 
 };
+
 /**
  * Sends a reminder to vote.
  */

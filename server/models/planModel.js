@@ -157,8 +157,6 @@ export const deletePlan = async (planId) => {
      RETURNING *`,
     [planId]
   );
-
-  console.log(req.user.name);
   
   return result.rows[0];
 };
