@@ -389,7 +389,14 @@ export default function PlanDetails() {
 
             <div className="flex flex-col items-end gap-2">
               <StatusBadge kind={viewerStatus} />
-              {deadlineISO ? (
+              {plan.status === "cancelled" ? (
+                <span
+                  className="text-xs px-2 py-1 rounded border bg-red-50 border-red-300 text-red-700"
+                  title="Plan cancelled"
+                >
+                  Plan Cancelled by Host
+                </span>
+              ) : deadlineISO ? (
                 <span
                   className={[
                     "text-xs px-2 py-1 rounded border",
@@ -399,8 +406,7 @@ export default function PlanDetails() {
                   ].join(" ")}
                   title="Voting deadline"
                 >
-                  {votingClosed ? "Voting closed" : "Voting open"} •{" "}
-                  {new Date(deadlineISO).toLocaleString()}
+                  {`${votingClosed ? "Voting closed" : "Voting open"} • ${new Date(deadlineISO).toLocaleString()}`}
                 </span>
               ) : (
                 <span className="text-xs px-2 py-1 rounded border bg-muted text-foreground/70">
