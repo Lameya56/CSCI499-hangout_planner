@@ -161,7 +161,7 @@ export default function PlanDetails() {
 
       // Notify other parts of the app and navigate away
       window.dispatchEvent(new Event('plans:updated'));
-      navigate('/calendar');
+      navigate('/home');
     } catch (e) {
       alert(e.message || 'Failed to cancel plan');
     }
@@ -373,7 +373,7 @@ export default function PlanDetails() {
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <CardTitle className="text-2xl">{title}</CardTitle>
+              <CardTitle className={`text-2xl ${plan.status === "cancelled" ? "opacity-50 pointer-events-none" : ""}`}>{title}</CardTitle>
               <CardDescription className="mt-1 flex items-center gap-2 flex-wrap">
                 {location ? (
                   <span className="inline-flex items-center gap-1">
@@ -421,7 +421,7 @@ export default function PlanDetails() {
               ) : null}
 
               {viewerStatus === 'host' ? (
-                <Button size="sm" variant="destructive" onClick={handleCancel}>
+                <Button size="sm" variant="destructive" onClick={handleCancel} disabled={plan.status === 'cancelled'}>
                   Cancel Plan
                 </Button>
               ) : null}
@@ -436,7 +436,7 @@ export default function PlanDetails() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-8">
+        <CardContent className={`space-y-8 ${plan.status === "cancelled" ? "opacity-50 pointer-events-none" : ""}`}>
           {/* Winners (appears after deadline) — same section framing */}
           {votingClosed && (
             <section className="rounded-lg border bg-card">
@@ -490,7 +490,7 @@ export default function PlanDetails() {
           <Separator />
 
           {/* Proposals (shows original + suggestions) — same 2-column layout */}
-          <section className="rounded-lg border bg-card">
+          <section className={`rounded-lg border bg-card ${plan.status === "cancelled" ? "opacity-50 pointer-events-none" : ""}`}>
             <div className="p-4 border-b font-semibold">
               {votingClosed ? "All Considered Options" : "Current Proposals (with Suggestions)"}
             </div>
