@@ -21,3 +21,29 @@ export const getUserGroups = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch groups" });
     }
 };
+
+
+export const getChatHistory = async (req, res) => {
+    const groupID = req.params.groupID;
+
+    try{
+        const result = await pool.query(
+            `SELECT chat.message AS msg,
+                    chat.time_created AS time,
+                    users.name AS sender,
+                    users.id AS senderID
+             FROM chat
+             JOIN users ON chat.user_id = users.id
+             WHERE chat.plan_id = $1
+             ORDER BY chat.time_created ASC`,
+            [groupID]
+        );
+
+        res.json(result.rows);
+    }
+    catch(err){
+        console.error("-------Error getting chat history-----");
+        console.error(err);
+        res.status(500).json({message: "failed getting chat history"});
+    }
+};

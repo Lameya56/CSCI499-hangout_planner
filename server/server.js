@@ -48,9 +48,27 @@ io.on("connection", (socket) => {
 
 
 
-  socket.on("chat message", ({groupID, msg, sender}) => {
+  socket.on("chat message", async ({groupID, msg, senderID}) => {
     console.log(`Message in group: ${groupID}`, msg);
-    io.to(groupID).emit("chat message", {msg, sender})
+    try{
+      await pool.query(
+        `INSERT INTO chat (plan_id, user_id, message) VALUES ($1, $2, $3)`,
+        [groupID, senderID, msg]
+      );
+
+      const username = await pool.query(
+        `SELECT name FROM users WHERE id = $1`,
+        [senderID]
+      );
+
+      const sendersName = username.rows[0].name;
+
+      io.to(groupID).emit("chat message", {msg, senderID, sender: sendersName, time: new Date()})
+    }
+    catch(err){
+      console.log("---------message not sent to database---------")
+      console.log(err);
+    }
   });
 
 
