@@ -10,7 +10,7 @@ sendCountdownEmail } from "./emailService.js";
 // JOB 1: DEADLINE CHECKER & PLAN FINALIZER
 // Runs every minute to check for plans past their deadline.
 // -----------------------------------------------------------------------------
-cron.schedule("* * * * *", async () => {
+cron.schedule("*/10 * * * *", async () => {
     console.log("--------------------------testing cron execution--------------------------");
     const startTime = Date.now();
     try {

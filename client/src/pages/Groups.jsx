@@ -30,7 +30,7 @@ useEffect(() => {
     const fetchGroups = async () => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch("http://localhost:3001/api/groups", {
+            const res = await fetch("https://lets-go.site/api/groups", {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();

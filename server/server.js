@@ -18,11 +18,12 @@ import groupRoutes from './routes/groupRoutes.js';
 
 const app = express()
 const server = createServer(app);
+const origins = ["http://lets-go.site", "https://lets-go.site", "http://www.lets-go.site", "https://www.lets-go.site"];
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: origins,
     methods: ["GET", "POST"],
-  }, 
+  },
 });
 
 io.on("connection", (socket) => {
@@ -54,8 +55,7 @@ io.on("connection", (socket) => {
 });
 
 
-
-app.use(cors({ origin: "http://localhost:5173", credentials: true }))
+app.use(cors({ origin: origins, credentials: true }));
 app.use(express.json())
 // Routes
 app.get('/', (req, res) => {
@@ -72,6 +72,13 @@ const PORT = process.env.PORT || 3001
 
 
 
-server.listen(PORT, () => {
-    console.log(`🚀 Server listening on http://localhost:${PORT}`)
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server listening on http://lets-go.site:${PORT}`)
 })
+console.log("JWT_SECRET is:", process.env.JWT_SECRET);
+
+
+
+
+
+
