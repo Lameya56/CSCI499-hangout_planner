@@ -18,13 +18,25 @@ import groupRoutes from './routes/groupRoutes.js';
 
 const app = express()
 const server = createServer(app);
-const origins = ["http://lets-go.site", "https://lets-go.site", "http://www.lets-go.site", "https://www.lets-go.site"];
+const isLocal = process.env.LOCAL === "TRUE";
+
+const origins = isLocal
+  ? ["http://localhost:5173"] // local dev frontend
+  : [
+      "http://lets-go.site",
+      "https://lets-go.site",
+      "http://www.lets-go.site",
+      "https://www.lets-go.site"
+    ];
+ 
 const io = new Server(server, {
   cors: {
     origin: origins,
     methods: ["GET", "POST"],
   },
 });
+
+
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
@@ -73,7 +85,13 @@ const PORT = process.env.PORT || 3001
 
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server listening on http://lets-go.site:${PORT}`)
+  if(process.env.LOCAL === "TRUE"){
+    console.log(`🚀 Server listening on http://localhost:${PORT}`)
+  }
+  else{
+    console.log(`🚀 Server listening on https://lets-go.site`)
+  }
+  
 })
 console.log("JWT_SECRET is:", process.env.JWT_SECRET);
 

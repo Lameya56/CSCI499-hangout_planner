@@ -10,6 +10,9 @@ const [message, setMessage] = useState("");
 const [messages, setMessages] = useState([]);
 const [currentGroup, setCurrentGroup] = useState(null);
 
+const URL = import.meta.env.VITE_LOCAL === "TRUE"
+    ? import.meta.env.VITE_BACKEND_URL
+    : import.meta.env.VITE_SOCKET_URL; 
 
 useEffect(() => {
     const token = localStorage.getItem("token");
@@ -30,7 +33,7 @@ useEffect(() => {
     const fetchGroups = async () => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch("https://lets-go.site/api/groups", {
+            const res = await fetch(`${URL}/api/groups`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
@@ -42,6 +45,7 @@ useEffect(() => {
     };
     fetchGroups();
 },[]);
+
 
 
 

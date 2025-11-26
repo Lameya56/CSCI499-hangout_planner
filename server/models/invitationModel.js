@@ -1,6 +1,7 @@
 import { pool } from "../config/database.js";
 import crypto from "crypto";
 
+
 export const createInvitations = async (planId, invitees) => {
   const values = invitees.map((_, index) => 
     `($1, $${index * 3 + 2}, $${index * 3 + 3}, $${index * 3 + 4})`

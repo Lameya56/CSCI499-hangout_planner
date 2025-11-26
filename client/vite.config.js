@@ -3,6 +3,11 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
+const isLocal = process.env.LOCAL === "TRUE"
+const targetAPI = isLocal
+? "http://localhost:3001"
+: "https://lets-go.site"
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -17,15 +22,14 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        // ⚠️ Change localhost → EC2 public IP
-        target: "http://lets-go.site/",
+        target: "http://localhost:3001",
         changeOrigin: true,
       },
     },
-    host: "0.0.0.0", // allows all incoming connections
-    port: 5173,       // you can leave this or change if needed
+    host: "0.0.0.0",
+    port: 5173,
     allowedHosts: [
-      "lets-go.site",   // ✅ your EC2 instance public IP
+      "lets-go.site",
       "localhost",
     ],
   },

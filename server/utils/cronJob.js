@@ -1,4 +1,6 @@
 import cron from "node-cron"
+import dotenv from 'dotenv';
+dotenv.config();
 import { pool } from "../config/database.js";
 import { 
 sendPlanConfirmationEmail,
@@ -156,7 +158,9 @@ cron.schedule("0 9 * * *", async () => {
 
     console.log(`Sending ${invitesResult.rowCount} reminder emails...`);
     for (const invite of invitesResult.rows) {
-      const inviteLink = `${process.env.FRONTEND_URL}/respond/${invite.invite_token}`;
+      const inviteLink = process.env.LOCAL === "TRUE"
+      ? `${process.env.LOCAL_URL}/respond/${invite.invite_token}` : `${process.env.FRONTEND_URL}/respond/${invite.invite_token}`;
+
       await sendReminderEmail(invite.email, invite.title, invite.deadline, inviteLink);
     }
     console.log("All reminders sent.");
