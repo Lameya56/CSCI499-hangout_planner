@@ -60,3 +60,13 @@ Psql -U postgres
 \l —> to see all dbs  
 \c nameof db → to connect to db  
 \d  name of table -> to see the constraints of the table
+
+To update on a EC2 instance:
+To begin, close the back end first. So start of with doing pm2 status
+then do pm2 delete followed by the name of the status to close.
+And also pm2 flush to clear logs if you want.
+Upload the new files with github.
+Cd into the server folder, and run 
+pm2 start npm --name "server" -- start
+After CD back into the client folder and instead of npm run dev, we do npm run build.
+Then update nginx by doing: Sudo systemctl restart nginx
