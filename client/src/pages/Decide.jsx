@@ -32,6 +32,29 @@ const Decide = () => {
     fetchPlan();
   }, [token]);
 
+  // Redirect user if following conditions met
+  useEffect(() => {
+    if (!planData) return;
+
+    const { plan, invitation } = planData;
+
+    const decisionOver = plan?.decision_over_email_sent === true;
+    const cancelled = plan?.status === "cancelled";
+    const notResponded = invitation?.status === "pending"; // "responded", "accepted", "declined" count as responded
+
+    if (decisionOver || cancelled || notResponded) {
+      const message = cancelled
+        ? "This plan has been cancelled by the host."
+        : decisionOver
+        ? "The 24-hour decision window has ended."
+        : "You cannot decide because you did not respond to the original invitation.";
+
+      alert(message);   // show warning
+      navigate("/home"); // redirect away
+    }
+  }, [planData, navigate]);
+
+
   const handleDecision = async (choice) => {
     setSubmitting(true);
     try {
@@ -57,7 +80,13 @@ const Decide = () => {
   if (!planData) return null;
 
   const { plan, invitation } = planData;
-  console.log(plan);
+
+  // Compute disabling state for button safety
+  const decisionOver = plan?.decision_over_email_sent === true;
+  const cancelled = plan?.status === "cancelled";
+  const notResponded = invitation?.status === "pending"; // "responded", "accepted", "declined" count as responded
+
+  const disableButtons = submitting || cancelled || decisionOver || notResponded;
 
   return (
     <div className="flex justify-center items-center min-h-screen p-4">
@@ -93,14 +122,14 @@ const Decide = () => {
           <Button
             className="flex-1 bg-green-500 hover:bg-green-600 text-white"
             onClick={() => handleDecision("accepted")}
-            disabled={submitting || invitation.status !== "responded"}
+            disabled={disableButtons}
           >
             Accept
           </Button>
           <Button
             className="flex-1 bg-red-500 hover:bg-red-600 text-white"
             onClick={() => handleDecision("declined")}
-            disabled={submitting || invitation.status !== "responded"}
+            disabled={disableButtons}
           >
             Decline
           </Button>

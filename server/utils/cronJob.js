@@ -5,14 +5,15 @@ import { pool } from "../config/database.js";
 import { 
 sendPlanConfirmationEmail,
 sendReminderEmail, 
-sendCountdownEmail } from "./emailService.js";
+sendCountdownEmail,
+sendDeadlinePassedEmail } from "./emailService.js";
 
 
 // -----------------------------------------------------------------------------
 // JOB 1: DEADLINE CHECKER & PLAN FINALIZER
 // Runs every minute to check for plans past their deadline.
 // -----------------------------------------------------------------------------
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
     console.log("--------------------------testing cron execution--------------------------");
     const startTime = Date.now();
     try {
@@ -101,7 +102,6 @@ cron.schedule("*/10 * * * *", async () => {
                     }
                     console.log(`Sent ${participants.rowCount} participant confirmations.`);
                     //send to host 
-                    // 2. Send to Host 
                     const hostResult = await pool.query(`SELECT email FROM users WHERE id = $1`, [plan.host_id]);
                     if (hostResult.rowCount > 0) {
                         const hostEmail = hostResult.rows[0].email;
@@ -226,4 +226,100 @@ cron.schedule("0 8 * * *", async () => {
     console.log("----------------------Cron 3 Error----------------------");
     console.log("Cron job failed while sending countdowns.", err);
   }
+});
+
+// -----------------------------------------------------------------------------
+// JOB 4: DECISION DEADLINE CHECKER & PLAN FINALIZER FINALIZER
+// Send email about plans past deadline by roughly 24 hours to all accepted participants and host.
+// -----------------------------------------------------------------------------
+cron.schedule("*/3 * * * *", async () => {
+    console.log("------------ Running Deadline +24hr Checker ------------");
+
+    const start = Date.now();
+    try {
+        // Get confirmed plans that haven't had decision-over emails sent
+        const planResult = await pool.query(`
+            SELECT id, title, host_id, deadline, time, confirmed_date, confirmed_activity_id
+            FROM plans
+            WHERE status = 'confirmed' AND decision_over_email_sent = FALSE
+            ORDER BY deadline ASC
+        `);
+
+        const now = new Date();
+
+        for (const plan of planResult.rows) {
+            const deadline = new Date(plan.deadline);
+            const deadlinePlus24 = new Date(deadline.getTime() + 24 * 60 * 60 * 1000);
+
+            if (now < deadlinePlus24) continue;
+
+            console.log(`Deadline passed +24h for plan: ${plan.title} (ID: ${plan.id})`);
+
+            // Fetch confirmed activity details
+            const activityResult = await pool.query(`
+                SELECT id, name, location
+                FROM activities
+                WHERE id = $1
+            `, [plan.confirmed_activity_id]);
+
+            const confirmedActivity = activityResult.rowCount > 0 
+                ? activityResult.rows[0] 
+                : { name: "Unknown", location: "" };
+
+            const confirmedDate = plan.confirmed_date;
+
+            // Fetch participants who ACCEPTED
+            const participants = await pool.query(`
+                SELECT u.email, i.invite_token
+                FROM invitations i
+                JOIN users u ON i.invitee_id = u.id
+                WHERE i.plan_id = $1 AND i.status = 'accepted'
+            `, [plan.id]);
+
+            // Send deadline-passed email to accepted participants
+            for (const participant of participants.rows) {
+                await sendDeadlinePassedEmail(
+                    participant.email,
+                    plan,
+                    confirmedDate,
+                    confirmedActivity,
+                    participant.invite_token,
+                    false
+                );
+            }
+
+            console.log(`Sent "decision over" emails to ${participants.rowCount} accepted participants.`);
+
+            // Fetch host email
+            const hostResult = await pool.query(`
+                SELECT email FROM users WHERE id = $1
+            `, [plan.host_id]);
+
+            if (hostResult.rowCount > 0) {
+                const hostEmail = hostResult.rows[0].email;
+                await sendDeadlinePassedEmail(
+                    hostEmail,
+                    plan,
+                    confirmedDate,
+                    confirmedActivity,
+                    null,
+                    true
+                );
+                console.log(`Sent host "decision over" email to ${hostEmail}`);
+            }
+
+            // Mark plan as emailed
+            await pool.query(`
+                UPDATE plans
+                SET decision_over_email_sent = TRUE
+                WHERE id = $1
+            `, [plan.id]);
+        }
+
+    } catch (err) {
+        console.error("Cron Job Failed:", err);
+    } finally {
+        const end = Date.now();
+        console.log(`Cron Job Completed in ${end - start} ms`);
+    }
 });

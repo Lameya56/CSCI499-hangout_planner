@@ -22,9 +22,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 import nodemailer from 'nodemailer';
 
-
-
-
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -142,7 +139,7 @@ export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, conf
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: `✅ Plan Confirmed: ${plan.title}`,
+    subject: `🔔 Plan Confirmed: ${plan.title}`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -178,7 +175,7 @@ export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, conf
               <p><strong>Location:</strong> ${confirmedActivity.location}</p>
             </div>
             ${!isHost ? `
-            <p>Click below to give your decision on the finalized plan:</p>   
+            <p>Click below to give your decision on the finalized plan. You have 24 hours to respond:</p>   
             <div style="text-align: center;">
               <a href="${decideLink}" class="button">
                 Click
@@ -307,5 +304,69 @@ export const sendCountdownEmail = async (email, plan, activity, daysRemaining) =
     console.log(`✅ ${daysRemaining}-day countdown email sent to ${email}`);
   } catch (error) {
     console.error(`❌ Error sending ${daysRemaining}-day countdown email:`, error);
+  }
+};
+
+export const sendDeadlinePassedEmail = async (email, plan, confirmedDate, confirmedActivity, invite_token, isHost = false) => {
+  const isLocal = process.env.LOCAL === "TRUE"
+  let planDetailsLink = isLocal
+  ? `${process.env.LOCAL_URL}/plans/${plan.id}`
+  : `${process.env.FRONTEND_URL}/plans/${plan.id}`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `✅ Decision Over: ${plan.title}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .details { background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+          .button { display: inline-block; background: #10b981; color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Decision Over!</h1>
+            <h2>${plan.title}</h2>
+          </div>
+          <div class="content">
+            <p>The 24-hour decision period on the finalized plan below is over for everyone.</p>
+            
+            <div class="details">
+              <h3>📅 Event Details:</h3>
+              <p><strong>Date:</strong> ${new Date(confirmedDate).toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</p>
+              <p><strong>Time:</strong> ${formatTime(plan.time)}</p>
+              <p><strong>Activity:</strong> ${confirmedActivity.name}</p>
+              <p><strong>Location:</strong> ${confirmedActivity.location}</p>
+            </div>
+            <div style="text-align: center;">
+              <a href="${planDetailsLink}" class="button">
+                Check Plan Details
+              </a>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Decision over email sent to ${email}`);
+  } catch (error) {
+    console.error('❌ Error sending decision over email:', error);
   }
 };
