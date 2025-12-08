@@ -10,6 +10,9 @@ const [message, setMessage] = useState("");
 const [messages, setMessages] = useState([]);
 const [currentGroup, setCurrentGroup] = useState(null);
 
+const URL = import.meta.env.VITE_LOCAL === "TRUE"
+    ? import.meta.env.VITE_BACKEND_URL
+    : import.meta.env.VITE_SOCKET_URL; 
 
 useEffect(() => {
     const token = localStorage.getItem("token");
@@ -30,7 +33,7 @@ useEffect(() => {
     const fetchGroups = async () => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch("http://localhost:3001/api/groups", {
+            const res = await fetch(`${URL}/api/groups`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data = await res.json();
@@ -42,6 +45,7 @@ useEffect(() => {
     };
     fetchGroups();
 },[]);
+
 
 
 
@@ -57,11 +61,26 @@ useEffect(() => {
     }
 
     //Join new room
-    console.log(`➡️ Client: joining room ${currentGroup.id}`);
+    console.log(`Client: joining room ${currentGroup.id}`);
     socket.emit("joinGroup", currentGroup.id);
     socket.currentRoom = currentGroup.id; 
 
     setMessages([]);
+    // Load chat history from backend
+    const loadChatHistory = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${URL}/api/groups/${currentGroup.id}/chat`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            setMessages(data);
+        } catch (err) {
+            console.error("Error fetching chat history:", err);
+        }
+    };
+
+    loadChatHistory();
 
 
     if(socket.connected){
@@ -79,7 +98,13 @@ useEffect(() => {
 
     socket.on("chat message",(data) => {
         console.log("Received Message:", data);
-        setMessages((prev) => [...prev, data]);
+        setMessages((prev) => [...prev, {
+            msg: data.msg,
+            senderID: data.senderID,
+            sender: data.sender,
+            time: data.time
+
+        }]);
     }
     );
 
@@ -94,7 +119,7 @@ useEffect(() => {
 const sendMessage = (e) => {
     e.preventDefault();
     if(!currentGroup || !message.trim())return;
-    socket.emit("chat message", { groupID: currentGroup.id, msg: message , sender: user?.name});
+    socket.emit("chat message", { groupID: currentGroup.id, msg: message , senderID: user.id});
     setMessage("");
 };
 
@@ -177,23 +202,26 @@ return (
                 
             }}
         >
-            {messages.map((msg, index) => (
-                <div key={index} style={{marginBottom: "8px",
-                    backgroundColor: "#09e2ffff",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    marginBottom: "8px",
-                    display: "inline-block",
-                    wordWrap: "break-word",     
-                    overflowWrap: "break-word",  
-                    maxWidth: "70%",             
-                    whiteSpace: "pre-wrap",    
-                    minWidth: "10%",
-                }}>
+            {messages.map((msg, index) => {
+            const isUser = msg.sender === user?.name;
+
+            return (
+                <div
+                    key={index}
+                    style={{
+                        marginBottom: "8px",
+                        backgroundColor: isUser ? "#95b0daff" : "#09e2ffff",
+                        padding: "8px 12px",
+                        borderRadius: "10px",
+                        maxWidth: "70%",
+                        alignSelf: isUser ? "flex-end" : "flex-start",
+                        textAlign: isUser ? "right" : "left",
+                    }}
+                >
                     <strong>{msg.sender}:</strong> {msg.msg}
-                    </div>
-            )
-        )}
+                </div>
+            );
+        })}
         </div>
         <div
     style={{

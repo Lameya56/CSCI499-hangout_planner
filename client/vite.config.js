@@ -3,7 +3,11 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
-// https://vite.dev/config/
+const isLocal = process.env.LOCAL === "TRUE"
+const targetAPI = isLocal
+? "http://localhost:3001"
+: "https://lets-go.site"
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -12,18 +16,21 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../server/public', //this is putting the built files in express app
-    emptyOutDir: true
+    outDir: "../server/public",
+    emptyOutDir: true,
   },
   server: {
     proxy: {
-      //all api requests that start with /api will be sent to the backend
-      '/api': {
-        target: 'http://localhost:3001',
+      "/api": {
+        target: "http://localhost:3001",
         changeOrigin: true,
-      }
-    }
-  }
-  
-  
+      },
+    },
+    host: "0.0.0.0",
+    port: 5173,
+    allowedHosts: [
+      "lets-go.site",
+      "localhost",
+    ],
+  },
 })

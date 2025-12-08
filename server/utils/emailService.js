@@ -18,7 +18,12 @@
 
 
 // utils/emailService.js (COMPLETE VERSION)
+import dotenv from 'dotenv';
+dotenv.config();
 import nodemailer from 'nodemailer';
+
+
+
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -29,7 +34,12 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendInvitationEmail = async (invitation, plan, planTitle) => {
-  const inviteLink = `${process.env.FRONTEND_URL}/respond/${invitation.invite_token}`;
+  const isLocal = process.env.LOCAL === "TRUE"
+  let inviteLink = isLocal
+  ? `${process.env.LOCAL_URL}/respond/${invitation.invite_token}`
+
+  : `${process.env.FRONTEND_URL}/respond/${invitation.invite_token}`;
+
   
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -124,7 +134,11 @@ const formatTime = (t) => {
  * @param {boolean} isHost - Flag to hide respond button for the host.
  */
 export const sendPlanConfirmationEmail = async (email, plan, confirmedDate, confirmedActivity, invite_token, isHost = false) => {
-  const decideLink = `${process.env.FRONTEND_URL}/decide/${invite_token}`;
+  const isLocal = process.env.LOCAL === "TRUE"
+  let decideLink = isLocal
+  ? `${process.env.LOCAL_URL}/decide/${invite_token}`
+  : `${process.env.FRONTEND_URL}/decide/${invite_token}`;
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,

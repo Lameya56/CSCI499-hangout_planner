@@ -18,12 +18,25 @@ import groupRoutes from './routes/groupRoutes.js';
 
 const app = express()
 const server = createServer(app);
+const isLocal = process.env.LOCAL === "TRUE";
+
+const origins = isLocal
+  ? ["http://localhost:5173"] // local dev frontend
+  : [
+      "http://lets-go.site",
+      "https://lets-go.site",
+      "http://www.lets-go.site",
+      "https://www.lets-go.site"
+    ];
+ 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: origins,
     methods: ["GET", "POST"],
-  }, 
+  },
 });
+
+
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
@@ -35,9 +48,27 @@ io.on("connection", (socket) => {
 
 
 
-  socket.on("chat message", ({groupID, msg, sender}) => {
+  socket.on("chat message", async ({groupID, msg, senderID}) => {
     console.log(`Message in group: ${groupID}`, msg);
-    io.to(groupID).emit("chat message", {msg, sender})
+    try{
+      await pool.query(
+        `INSERT INTO chat (plan_id, user_id, message) VALUES ($1, $2, $3)`,
+        [groupID, senderID, msg]
+      );
+
+      const username = await pool.query(
+        `SELECT name FROM users WHERE id = $1`,
+        [senderID]
+      );
+
+      const sendersName = username.rows[0].name;
+
+      io.to(groupID).emit("chat message", {msg, senderID, sender: sendersName, time: new Date()})
+    }
+    catch(err){
+      console.log("---------message not sent to database---------")
+      console.log(err);
+    }
   });
 
 
@@ -54,8 +85,7 @@ io.on("connection", (socket) => {
 });
 
 
-
-app.use(cors({ origin: "http://localhost:5173", credentials: true }))
+app.use(cors({ origin: origins, credentials: true }));
 app.use(express.json())
 // Routes
 app.get('/', (req, res) => {
@@ -72,6 +102,19 @@ const PORT = process.env.PORT || 3001
 
 
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
+  if(process.env.LOCAL === "TRUE"){
     console.log(`🚀 Server listening on http://localhost:${PORT}`)
+  }
+  else{
+    console.log(`🚀 Server listening on https://lets-go.site`)
+  }
+  
 })
+console.log("JWT_SECRET is:", process.env.JWT_SECRET);
+
+
+
+
+
+
