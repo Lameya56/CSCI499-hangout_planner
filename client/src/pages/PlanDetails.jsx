@@ -1,5 +1,6 @@
+// client/src/pages/PlanDetails.jsx
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -18,6 +19,10 @@ import {
   UserCheck,
   UserX,
   Crown,
+  Pencil,
+  Repeat2,
+  Users,
+  Link2,
 } from "lucide-react";
 
 /* ========= Date/time helpers (timezone-safe) ========= */
@@ -59,7 +64,7 @@ function isHttps(url) {
   return typeof url === "string" && /^https:\/\//i.test(url);
 }
 
-/* ========= Status badge (same aesthetic as before) ========= */
+/* ========= Status badge ========= */
 function StatusBadge({ kind }) {
   if (kind === "host") {
     return (
@@ -91,6 +96,7 @@ function StatusBadge({ kind }) {
 
 export default function PlanDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [plan, setPlan] = useState(null);
   const [viewer, setViewer] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -153,7 +159,9 @@ export default function PlanDetails() {
     winningDates,
     winningActivities,
     viewerStatus,        // 'host' | 'responded' | 'pending' | 'not_invited'
-    viewerInviteToken,   // token to nudge respond, if desired
+    viewerInviteToken,   // invite deep link
+    respondedList,       // [{name,email}], pendingList: [{name,email}]
+    pendingList,
   } = useMemo(() => {
     if (!plan) {
       return {
@@ -168,6 +176,8 @@ export default function PlanDetails() {
         winningActivities: [],
         viewerStatus: "not_invited",
         viewerInviteToken: null,
+        respondedList: [],
+        pendingList: [],
       };
     }
 
@@ -274,6 +284,20 @@ export default function PlanDetails() {
       }
     }
 
+    // responses list
+    const respondedList = [];
+    const pendingList = [];
+    if (Array.isArray(plan.invitations)) {
+      for (const inv of plan.invitations) {
+        const name = inv?.invitee_name || inv?.name || "";
+        const email = inv?.invitee_email || inv?.email || "";
+        const status = (inv?.status || "").toLowerCase();
+        const item = { name: name || email || "Unknown user", email };
+        if (status === "responded") respondedList.push(item);
+        else pendingList.push(item);
+      }
+    }
+
     return {
       title,
       image,
@@ -286,8 +310,32 @@ export default function PlanDetails() {
       winningActivities,
       viewerStatus,
       viewerInviteToken,
+      respondedList,
+      pendingList,
     };
   }, [plan, viewer, now]);
+
+  // === Invite link prompt handler ===
+  const handleUseInviteLink = () => {
+    const raw = window.prompt(
+      "Paste your invite link (e.g., https://letsgo/respond/123abc) or just the token:"
+    );
+    if (!raw) return;
+
+    // Try to extract token from a full URL or accept raw token
+    // Matches .../respond/<token> or token=<token> or bare token
+    const m =
+      raw.match(/\/respond\/([A-Za-z0-9_-]+)/i) ||
+      raw.match(/[?&]token=([A-Za-z0-9_-]+)/i);
+
+    const token = m ? m[1] : raw.trim();
+
+    if (!/^[A-Za-z0-9_-]+$/.test(token)) {
+      alert("That doesn't look like a valid invite token. Please check your link.");
+      return;
+    }
+    navigate(`/respond/${token}`);
+  };
 
   if (loading) {
     return (
@@ -329,7 +377,7 @@ export default function PlanDetails() {
   return (
     <div className="flex items-start justify-center p-4">
       <Card className="w-full max-w-4xl overflow-hidden">
-        {/* Banner (same visual style as before) */}
+        {/* Banner */}
         {isHttps(image) ? (
           <div
             className="h-56 w-full bg-center bg-cover"
@@ -342,7 +390,7 @@ export default function PlanDetails() {
           </div>
         )}
 
-        {/* Header row */}
+        {/* Header */}
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -354,7 +402,6 @@ export default function PlanDetails() {
                     {location}
                   </span>
                 ) : (
-                  //TBD
                   <span className="opacity-70"></span>
                 )}
               </CardDescription>
@@ -381,11 +428,37 @@ export default function PlanDetails() {
                 </span>
               )}
 
-              {viewerStatus === "pending" && viewerInviteToken ? (
-                <Link to={`/respond/${viewerInviteToken}`}>
-                  <Button size="sm">Respond now</Button>
-                </Link>
-              ) : null}
+              {/* Actions */}
+              {viewerStatus === "host" ? (
+                <Button
+                  size="sm"
+                  onClick={() => navigate(`/plan?planId=${id}`)}
+                  title="Update this plan"
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Update plan
+                </Button>
+              ) : (
+                <>
+                  {viewerInviteToken ? (
+                    <Link to={`/respond/${viewerInviteToken}`}>
+                      <Button size="sm" variant="secondary" title="Edit your response">
+                        <Repeat2 className="h-4 w-4 mr-2" />
+                        Edit your response
+                      </Button>
+                    </Link>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    title="Use an invite link from your email"
+                    onClick={handleUseInviteLink}
+                  >
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Use invite link
+                  </Button>
+                </>
+              )}
 
               <Link to="/calendar">
                 <Button size="sm" variant="outline">
@@ -398,7 +471,7 @@ export default function PlanDetails() {
         </CardHeader>
 
         <CardContent className="space-y-8">
-          {/* Winners (appears after deadline) — same section framing */}
+          {/* Winners (after deadline) */}
           {votingClosed && (
             <section className="rounded-lg border bg-card">
               <div className="p-4 flex items-center gap-2 border-b">
@@ -412,7 +485,7 @@ export default function PlanDetails() {
                     <CalendarDays className="h-4 w-4" />
                     Date & Time
                   </div>
-                  {winningDates.length ? (
+                  {(Array.isArray(winningDates) && winningDates.length) ? (
                     <ul className="text-sm space-y-1">
                       {winningDates.map((x, i) => (
                         <li key={i}>
@@ -429,7 +502,7 @@ export default function PlanDetails() {
 
                 <div>
                   <div className="text-sm font-medium mb-2">Activity & Location</div>
-                  {winningActivities.length ? (
+                  {Array.isArray(winningActivities) && winningActivities.length ? (
                     <ul className="text-sm space-y-1">
                       {winningActivities.map((a, i) => (
                         <li key={i}>
@@ -447,10 +520,9 @@ export default function PlanDetails() {
             </section>
           )}
 
-          {/* Divider to match earlier visual rhythm */}
           <Separator />
 
-          {/* Proposals (shows original + suggestions) — same 2-column layout */}
+          {/* Proposals (shows original + suggestions) */}
           <section className="rounded-lg border bg-card">
             <div className="p-4 border-b font-semibold">
               {votingClosed ? "All Considered Options" : "Current Proposals (with Suggestions)"}
@@ -499,6 +571,48 @@ export default function PlanDetails() {
                   </ul>
                 ) : (
                   <div className="text-sm opacity-70">No activity/location options.</div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Responses section */}
+          <section className="rounded-lg border bg-card">
+            <div className="p-4 flex items-center gap-2 border-b">
+              <Users className="h-5 w-5" />
+              <div className="font-semibold">Responses</div>
+            </div>
+
+            <div className="p-4 grid gap-6 sm:grid-cols-2">
+              <div>
+                <div className="text-sm font-medium mb-2">Responded ({respondedList.length})</div>
+                {respondedList.length ? (
+                  <ul className="text-sm space-y-1">
+                    {respondedList.map((u, i) => (
+                      <li key={`r-${i}`}>
+                        {u.name}
+                        {u.email ? <span className="opacity-60"> — {u.email}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm opacity-70">No one has responded yet.</div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-sm font-medium mb-2">Pending ({pendingList.length})</div>
+                {pendingList.length ? (
+                  <ul className="text-sm space-y-1">
+                    {pendingList.map((u, i) => (
+                      <li key={`p-${i}`}>
+                        {u.name}
+                        {u.email ? <span className="opacity-60"> — {u.email}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm opacity-70">No pending invitees.</div>
                 )}
               </div>
             </div>
