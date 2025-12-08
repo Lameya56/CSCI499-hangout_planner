@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { SidebarTrigger } from "./ui/sidebar";
 const Navbar = () => {
     const { setAuthUser } = useAuth();
@@ -43,10 +43,6 @@ const Navbar = () => {
                         <DropdownMenuItem>
                             <User className="h-[1.2rem] w-[1.2rem] mr-2"/>
                             Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                            <Settings className="h-[1.2rem] w-[1.2rem] mr-2"/>
-                            Settings
                         </DropdownMenuItem>
                         <DropdownMenuItem  asChild variant="destructive">
                              <button onClick={handleLogout} className="flex items-center w-full">
