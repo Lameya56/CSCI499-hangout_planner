@@ -1,4 +1,3 @@
-// client/src/pages/PlanDetails.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
