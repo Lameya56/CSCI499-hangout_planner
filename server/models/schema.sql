@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS activities(
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Invitations ( invitee_id can be NULL initially); status = pending, responded, confirmed, declined
+-- Invitations ( invitee_id can be NULL initially); status = pending, responded, accepted, declined
 CREATE TABLE IF NOT EXISTS invitations(
     id BIGSERIAL PRIMARY KEY NOT NULL,
     plan_id BIGINT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
