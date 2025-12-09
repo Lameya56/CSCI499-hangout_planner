@@ -160,7 +160,7 @@ export default function ProfileModal({ open, onClose }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md space-y-6">
+      <DialogContent className="max-w-md max-h-[75vh] overflow-y-auto space-y-4">
         <DialogHeader>
           <DialogTitle>My Profile</DialogTitle>
         </DialogHeader>
