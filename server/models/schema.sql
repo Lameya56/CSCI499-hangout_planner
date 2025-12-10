@@ -91,6 +91,63 @@ CREATE TABLE IF NOT EXISTS group_messages(
     
 
 );
+
+
+-- Create stories/posts table
+CREATE TABLE IF NOT EXISTS explore_posts(
+    id BIGSERIAL PRIMARY KEY NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id BIGINT REFERENCES plans(id) ON DELETE SET NULL,
+    title VARCHAR(500) NOT NULL,
+    content TEXT NOT NULL,
+    image_url TEXT,
+    location VARCHAR(255),
+    tags TEXT[], -- Array of tags like ['beach', 'friends', 'summer']
+    is_public BOOLEAN DEFAULT true,
+    likes_count INTEGER DEFAULT 0,
+    comments_count INTEGER DEFAULT 0, 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create likes table 
+CREATE TABLE IF NOT EXISTS post_likes(
+    id BIGSERIAL PRIMARY KEY NOT NULL,
+    post_id BIGINT NOT NULL REFERENCES explore_posts(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(post_id, user_id)
+);
+
+-- Add comments table
+CREATE TABLE IF NOT EXISTS post_comments(
+    id BIGSERIAL PRIMARY KEY NOT NULL,
+    post_id BIGINT NOT NULL REFERENCES explore_posts(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    comment TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_post_comments_post ON post_comments(post_id);
+CREATE INDEX idx_post_comments_user ON post_comments(user_id);
+CREATE INDEX idx_post_comments_created ON post_comments(created_at DESC);
+
+-- Trigger for comments updated_at
+CREATE TRIGGER update_post_comments_updated_at 
+BEFORE UPDATE ON post_comments
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Indexes
+CREATE INDEX idx_explore_posts_user ON explore_posts(user_id);
+CREATE INDEX idx_explore_posts_public ON explore_posts(is_public);
+CREATE INDEX idx_explore_posts_created ON explore_posts(created_at DESC);
+CREATE INDEX idx_post_likes_post ON post_likes(post_id);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_explore_posts_updated_at 
+BEFORE UPDATE ON explore_posts
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 -- add the tables upto here the below ones are still being decided/ u can test or add them and update us. 
 
 -- -- Change suggestions
