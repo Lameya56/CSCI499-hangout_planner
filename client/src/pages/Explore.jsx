@@ -1,93 +1,3 @@
-// import { useEffect, useState } from "react";
-// import { Card, CardContent } from "@/components/ui/card";
-// import { Button } from "@/components/ui/button";
-// import { Link, useNavigate } from "react-router-dom";
-
-// const Explore = () => {
-//   const [posts, setPosts] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     fetchPosts();
-//   }, []);
-
-//   const fetchPosts = async () => {
-//     try {
-//       console.log("📥 Fetching explore posts...");
-//       const res = await fetch("/api/explore");
-//       const data = await res.json();
-
-//       if (res.ok) {
-//         console.log("✅ Posts loaded:", data.posts.length);
-//         setPosts(data.posts);
-//       }
-//     } catch (err) {
-//       console.error("❌ Error fetching posts:", err);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="flex justify-center items-center min-h-[400px]">
-//         <p>Loading stories...</p>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div>
-//       <div className="flex justify-between items-center mb-8">
-//         <h1 className="text-3xl font-bold">Explore Hangout Stories</h1>
-//         <Button onClick={() => navigate("/explore/create")}>
-//           + Share Your Story
-//         </Button>
-//       </div>
-
-//       {posts.length === 0 ? (
-//         <div className="text-center py-12">
-//           <p className="text-gray-500 mb-4">No stories yet. Be the first to share!</p>
-//           <Button onClick={() => navigate("/explore/create")}>
-//             Share Your Story
-//           </Button>
-//         </div>
-//       ) : (
-//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-//           {posts.map((post) => (
-//             <Link
-//               key={post.id}
-//               to={`/explore/${post.id}`}
-//               className="block rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition"
-//             >
-//               <Card className="p-0">
-//                 {post.image_url && (
-//                   <img
-//                     src={post.image_url}
-//                     alt={post.title}
-//                     className="w-full h-50 object-cover rounded-t-2xl"
-//                   />
-//                 )}
-//                 <CardContent className="p-4">
-//                   <h2 className="text-lg font-semibold text-gray-900">{post.title}</h2>
-//                   <p className="text-sm text-gray-600 mt-1">By {post.author_name}</p>
-//                   <p className="text-sm text-gray-600 mt-1">{new Date(post.created_at).toLocaleDateString()}</p>
-//                    {/* 👍 Likes count */}
-//                   <p className="text-sm font-medium text-gray-800 mt-2">
-//                     👍 {post.likes} likes
-//                   </p>
-//                 </CardContent>
-//               </Card>
-//             </Link>
-//           ))}
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default Explore;
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -103,8 +13,13 @@ const Explore = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+     const delay = setTimeout(() => {
     fetchPosts();
-  }, [sortBy]);
+  }, 300); // small debounce
+
+  return () => clearTimeout(delay);
+   
+  }, [sortBy, searchTerm]);
 
   const fetchPosts = async () => {
     try {
