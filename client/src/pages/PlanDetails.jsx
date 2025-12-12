@@ -22,6 +22,7 @@ import {
   Repeat2,
   Users,
   Link2,
+  Lock, // ✅ NEW
 } from "lucide-react";
 
 /* ========= Date/time helpers (timezone-safe) ========= */
@@ -76,6 +77,14 @@ function StatusBadge({ kind }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-green-50 border-green-300 text-green-700">
         <UserCheck className="h-3.5 w-3.5" /> Responded
+      </span>
+    );
+  }
+  // ✅ NEW: Closed (invitee missed deadline)
+  if (kind === "closed") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-slate-50 border-slate-300 text-slate-700">
+        <Lock className="h-3.5 w-3.5" /> Closed
       </span>
     );
   }
@@ -157,9 +166,9 @@ export default function PlanDetails() {
     activityOptions,
     winningDates,
     winningActivities,
-    viewerStatus,        // 'host' | 'responded' | 'pending' | 'not_invited'
-    viewerInviteToken,   // invite deep link
-    respondedList,       // [{name,email}], pendingList: [{name,email}]
+    viewerStatus,
+    viewerInviteToken,
+    respondedList,
     pendingList,
   } = useMemo(() => {
     if (!plan) {
@@ -283,6 +292,11 @@ export default function PlanDetails() {
       }
     }
 
+    // ✅ NEW: if invitee is still pending but deadline passed → show "Closed"
+    if (viewerStatus === "pending" && votingClosed) {
+      viewerStatus = "closed";
+    }
+
     // responses list
     const respondedList = [];
     const pendingList = [];
@@ -321,8 +335,6 @@ export default function PlanDetails() {
     );
     if (!raw) return;
 
-    // Try to extract token from a full URL or accept raw token
-    // Matches .../respond/<token> or token=<token> or bare token
     const m =
       raw.match(/\/respond\/([A-Za-z0-9_-]+)/i) ||
       raw.match(/[?&]token=([A-Za-z0-9_-]+)/i);
