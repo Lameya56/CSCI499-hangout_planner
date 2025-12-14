@@ -6,6 +6,9 @@ Built with a modern tech stack, Hangout Planner ensures a responsive, secure, an
 Key highlights include automatic final decision generation for group events, live group chat, post likes and comments, searchable and sortable community content, and personalized notifications for upcoming or pending events.
 
 Whether coordinating with friends or exploring new hangout ideas, Hangout Planner streamlines the process and enhances social engagement.
+
+[https://lets-go.site/](https://lets-go.site/)
+
 ## Features
   ### 🔐 Authentication
 - Secure user registration and login
@@ -72,33 +75,42 @@ Whether coordinating with friends or exploring new hangout ideas, Hangout Planne
 - **Database:** PostgreSQL
 - **Authentication:** JWT (JSON Web Tokens)
 - **Other:** VS Code, Git, npm
-## Getting Started
-Aight time for the good part 
+
+## To Build Locally
 
 ### Prerequisites
 - Node.js v18+ 
 - PostgreSQL installed and running
 - npm or yarn
 
-step 1: create a folder (u can call it capstone or whatever)  
+step 1: create a folder (u can call it capstone or whatever)
+```
+mkdir capstone
+cd capstone
+```
 step 2: git clone the repo  
-step 3: cd CSCI499-hangout_planner  
+```
+git clone <url>
+```
+step 3: navigate into the project  
+```
+cd CSCI499-hangout_planner
+```
 
-### Frontend setup
-To run the frontend:  
-cd client  
-npm i - to install all dependencies  
-npm run dev  - to start localhost5173  
-### Backend Setup
-To run the backend:  
-open another terminal simultaneously 
-Navigate to the `server` folder:  
-cd server  
-npm i - to install dependencies  
+### Postgres
+Go inside the `models` directory under `server` and create the tables found in `schema.sql` in your postgres.
 
-## Inside the server directory 
-Create a .env file (copy from .env.example) and add your PostgreSQL credentials and JWT secret: 
+To login to postgres:  
+```
+Psql -U postgres  
+\l → to see all dbs  
+\c hangout_planner → to connect to hangout_planner  
+\d name_of_table → to see the constraints of the table
+```
 
+### Inside the `server` directory 
+Create an `.env` file with the contents below and add your PostgreSQL credentials and JWT secret: 
+```
 PGDATABASE=hangout_planner  
 PGHOST=localhost  
 PGPORT=5432  
@@ -108,20 +120,26 @@ JWT_SECRET=yourjwtsecret
 FRONTEND_URL=http://localhost:5173  
 EMAIL_USER=letsgo.noreply.bot@gmail.com  
 EMAIL_PASSWORD=pwfp mbjc sxpd fhag  
+```
 
-## finally run npm start in ur terminal
-npm start --> to start server on localhost:3001
+### Frontend setup
+To run the frontend:  
+```
+cd client  
+npm i        // to install all dependencies  
+npm run dev  // to start http://localhost:5173
+```
 
-## some postgres stuff
-Now you can go inside models directory and create the tables in your postgres.
+### Backend Setup
+To run the backend:  
+open another terminal simultaneously:  
+```
+cd server  
+npm i      // to install dependencies  
+npm start  // to start server on localhost:3001
+```    
 
-To login to postgres:  
-Psql -U postgres  
-\l —> to see all dbs  
-\c nameof db → to connect to db  
-\d  name of table -> to see the constraints of the table
-
-To update on a EC2 instance\
+## To update on a EC2 instance
 To begin, close the back end first. So start of with doing pm2 status\
 then do pm2 delete followed by the name of the status to close.\
 And also pm2 flush to clear logs if you want.\
