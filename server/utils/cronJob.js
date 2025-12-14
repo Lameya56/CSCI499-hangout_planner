@@ -232,7 +232,7 @@ cron.schedule("0 8 * * *", async () => {
 // JOB 4: DECISION DEADLINE CHECKER & PLAN FINALIZER FINALIZER
 // Send email about plans past deadline by roughly 24 hours to all accepted participants and host.
 // -----------------------------------------------------------------------------
-cron.schedule("*/3 * * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
     console.log("------------ Running Deadline +24hr Checker ------------");
 
     const start = Date.now();

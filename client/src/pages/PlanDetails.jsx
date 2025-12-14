@@ -75,7 +75,7 @@ function StatusBadge({ kind }) {
   }
   if (kind === "responded") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-green-50 border-green-300 text-green-700">
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-lime-50 border-lime-300 text-lime-700">
         <UserCheck className="h-3.5 w-3.5" /> Responded
       </span>
     );
@@ -92,6 +92,20 @@ function StatusBadge({ kind }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-amber-50 border-amber-300 text-amber-700">
         <UserX className="h-3.5 w-3.5" /> Pending
+      </span>
+    );
+  }
+  if (kind === "accepted") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-green-50 border-green-300 text-green-700">
+        <UserX className="h-3.5 w-3.5" /> Accepted
+      </span>
+    );
+  }
+  if (kind === "declined") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border bg-red-50 border-red-300 text-red-700">
+        <UserX className="h-3.5 w-3.5" /> Declined
       </span>
     );
   }
@@ -196,6 +210,8 @@ export default function PlanDetails() {
     viewerInviteToken,
     respondedList,
     pendingList,
+    acceptedList,
+    declinedList,
   } = useMemo(() => {
     if (!plan) {
       return {
@@ -212,6 +228,8 @@ export default function PlanDetails() {
         viewerInviteToken: null,
         respondedList: [],
         pendingList: [],
+        acceptedList: [],
+        declinedList: [],
       };
     }
 
@@ -313,7 +331,10 @@ export default function PlanDetails() {
       });
       if (match) {
         const st = (match.status || "").toLowerCase();
-        viewerStatus = st === "responded" ? "responded" : "pending";
+        if (st === "accepted") viewerStatus = "accepted";
+        else if (st === "declined") viewerStatus = "declined";
+        else if (st === "pending") viewerStatus = "pending";
+        else if (st === "responded") viewerStatus = "responded";
         if (typeof match.token === "string" && match.token) viewerInviteToken = match.token;
       }
     }
@@ -326,14 +347,18 @@ export default function PlanDetails() {
     // responses list
     const respondedList = [];
     const pendingList = [];
+    const acceptedList = [];
+    const declinedList = [];
     if (Array.isArray(plan.invitations)) {
       for (const inv of plan.invitations) {
         const name = inv?.invitee_name || inv?.name || "";
         const email = inv?.invitee_email || inv?.email || "";
         const status = (inv?.status || "").toLowerCase();
         const item = { name: name || email || "Unknown user", email };
-        if (status === "responded") respondedList.push(item);
-        else pendingList.push(item);
+        if (status === "accepted") acceptedList.push(item);
+        else if (status === "declined") declinedList.push(item);
+        else if (status === "pending") pendingList.push(item);
+        else respondedList.push(item); // responded
       }
     }
 
@@ -351,6 +376,8 @@ export default function PlanDetails() {
       viewerInviteToken,
       respondedList,
       pendingList,
+      acceptedList,
+      declinedList,
     };
   }, [plan, viewer, now]);
 
@@ -680,6 +707,54 @@ export default function PlanDetails() {
                   </ul>
                 ) : (
                   <div className="text-sm opacity-70">No pending invitees.</div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Final Decisions section */}
+          <section className="rounded-lg border bg-card">
+            <div className="p-4 flex items-center gap-2 border-b">
+              <UserCheck className="h-5 w-5" />
+              <div className="font-semibold">Final Decisions</div>
+            </div>
+
+            <div className="p-4 grid gap-6 sm:grid-cols-2">
+              {/* Accepted */}
+              <div>
+                <div className="text-sm font-medium mb-2 text-green-700">
+                  Accepted ({acceptedList.length})
+                </div>
+                {acceptedList.length ? (
+                  <ul className="text-sm space-y-1">
+                    {acceptedList.map((u, i) => (
+                      <li key={`a-${i}`}>
+                        {u.name}
+                        {u.email ? <span className="opacity-60"> — {u.email}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm opacity-70">No accepted invitees.</div>
+                )}
+              </div>
+
+              {/* Declined */}
+              <div>
+                <div className="text-sm font-medium mb-2 text-red-700">
+                  Declined ({declinedList.length})
+                </div>
+                {declinedList.length ? (
+                  <ul className="text-sm space-y-1">
+                    {declinedList.map((u, i) => (
+                      <li key={`d-${i}`}>
+                        {u.name}
+                        {u.email ? <span className="opacity-60"> — {u.email}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm opacity-70">No declined invitees.</div>
                 )}
               </div>
             </div>
