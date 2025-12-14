@@ -210,16 +210,45 @@ const Plan = () => {
     fetchPlan();
   }, [isEditMode, planId, reset, planLoaded, setValue]);
 
+  const uploadImage = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch('/api/images/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    const data = await res.json();
+    return data.imageUrl; // <-- this is the URL to use in your plan
+  };
   // ---------- SUBMIT (CREATE or UPDATE) ----------
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
       const token = localStorage.getItem("token");
+      let imageUrl = "";
+
+      if (data.imageUpload?.length > 0) {
+        imageUrl = await uploadImage(data.imageUpload[0]);
+      }
+      else if (data.image) {
+        imageUrl = data.image;
+      }
 
       const planData = {
         title: data.eventTitle,
         time: data.time,
-        image: data.image || null,
+        image: imageUrl,
         dates: (data.dates || [])
           .filter(d => d.name)
           .map(d => ({ name: d.name })),

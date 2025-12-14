@@ -14,6 +14,12 @@ import voteRoutes from './routes/voteRoutes.js';
 import './utils/cronJob.js';
 import groupRoutes from './routes/groupRoutes.js';
 import exploreRoutes from './routes/exploreRoutes.js';
+import imagesRoutes from './routes/images.js';
+import path from "path";
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 const app = express()
@@ -36,6 +42,10 @@ const io = new Server(server, {
   },
 });
 
+
+if (process.env.LOCAL === "TRUE") {
+  app.use('/uploads', express.static('uploads')); // <-- make local files accessible
+  }
 
 
 io.on("connection", (socket) => {
@@ -97,6 +107,8 @@ app.use('/api/invitations', invitationRoutes);
 app.use('/api/votes', voteRoutes);
 app.use("/api/groups", groupRoutes);
 app.use('/api/explore', exploreRoutes);
+app.use('/api/images', imagesRoutes)
+
 
 const PORT = process.env.PORT || 3001
 
@@ -112,12 +124,6 @@ server.listen(PORT, "0.0.0.0", () => {
   
 })
 console.log("JWT_SECRET is:", process.env.JWT_SECRET);
-
-
-
-
-
-
 
 
 
