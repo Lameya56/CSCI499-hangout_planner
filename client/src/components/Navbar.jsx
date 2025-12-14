@@ -10,11 +10,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { SidebarTrigger } from "./ui/sidebar";
+import { useState } from "react";
+import ProfileModal from "./ProfileModal.jsx";
+
 const Navbar = () => {
-    const { setAuthUser } = useAuth();
+    const { authUser, setAuthUser } = useAuth();
     const navigate = useNavigate();
+    const [profileOpen, setProfileOpen] = useState(false);
 
     const handleLogout = () => {
     // 1. Remove JWT from localStorage
@@ -38,15 +42,11 @@ const Navbar = () => {
                         </Avatar>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent sideOffset={10}>
-                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                        <DropdownMenuLabel>{authUser?.name || "My Account"}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setProfileOpen(true)}>
                             <User className="h-[1.2rem] w-[1.2rem] mr-2"/>
                             Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                            <Settings className="h-[1.2rem] w-[1.2rem] mr-2"/>
-                            Settings
                         </DropdownMenuItem>
                         <DropdownMenuItem  asChild variant="destructive">
                              <button onClick={handleLogout} className="flex items-center w-full">
@@ -57,6 +57,7 @@ const Navbar = () => {
                     </DropdownMenuContent>
                 </DropdownMenu>               
             </div>
+            <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
         </nav>
     )
 }

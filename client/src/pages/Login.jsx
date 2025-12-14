@@ -13,12 +13,16 @@ import { Label } from "@/components/ui/label"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "../AuthContext.jsx"
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+
 const Login = () => {
     const { setAuthUser } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const redirectTo = searchParams.get('redirect');
     const {register, handleSubmit, formState:{errors, isSubmitting}, reset} = useForm();
+    const [showPassword, setShowPassword] = useState(false);
       const onSubmit = async (data) => {
         try {
             const res = await fetch("/api/login", {
@@ -83,15 +87,31 @@ const Login = () => {
                             Forgot your password?
                             </Link>    
                         </div>
-                        <Input 
-                        {...register("password",
-                        {required:"Password is required"}
-                        )}
-                        id="password" 
-                        type="password" required />
+
+                        <div className="relative">
+                            <Input
+                            {...register("password",
+                            {required: "Password is required"}
+                            )}
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            className="pr-10"
+                            required
+                            />
+
+                            {/* Eye Icon */}
+                            <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                            >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
+
                         {errors.password && (<p className="text-red-500">{`${errors.password.message}`}</p>)}
-                        
                         </div >
+
                         <div className="grid gap-2">
                         <Button type="submit" className="w-full">
                          Login

@@ -12,13 +12,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate, useSearchParams } from "react-router-dom" 
-
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react"
 
 const SignUp = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const redirectTo = searchParams.get('redirect');
     const {register, handleSubmit, formState: {errors, isSubmitting}, getValues, reset} = useForm();
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const onSubmit = async(data) => {
         try {
             const res = await fetch("/api/signup", {
@@ -104,37 +107,63 @@ const SignUp = () => {
                                         Forgot your password?
                                     </Link>                    
                                 </div>
-                                <Input
-                                {...register("password", 
-                                {required: "Password is required", 
-                                minLength:{
-                                    value: 6,
-                                    message: "Password must be atleast 6 characters"}  
-                                })} 
-                                id="password" 
-                                type="password"
-                                placeholder="Create New Password"
-                                />
+
+                                <div className="relative">
+                                    <Input
+                                    {...register("password",
+                                    {required: "Password is required",
+                                    minLength:{
+                                        value: 6,
+                                        message: "Password must be at least 6 characters"}
+                                    })}
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Create New Password"
+                                    className="pr-10"
+                                    />
+
+                                    <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                    >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+
                                 {errors.password && (<p className="text-red-500">{`${errors.password.message}`}</p>) }
                                 </div>
 
-                                {/* Confirm Passworkd */}
+                                {/* Confirm Password */}
                                 <div className="grid gap-2">
                                 <Label htmlFor="confirm password">Confirm Password</Label>
-                                <Input
+
+                                <div className="relative">
+                                    <Input
                                     {...register("confirmPassword",
                                         {required:"Confirm Password is required",
                                         validate: (value) =>
-                                            value === getValues("password") || "passwords must match",
-                                                                
+                                            value === getValues("password") || "Passwords must match",
                                         }
                                     )}
                                     id="confirm password"
-                                    type="password"
+                                    type={showConfirmPassword ? "text" : "password"}
                                     placeholder="Confirm Password"
-                                />
+                                    className="pr-10"
+                                    />
+
+                                    <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                    >
+                                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+
                                 {errors.confirmPassword && (<p className="text-red-500">{`${errors.confirmPassword.message}`}</p>)}
                                 </div>
+
                                 {/* SUBMIT */}
                                 <div className="grid gap-2">
                                 <Button 

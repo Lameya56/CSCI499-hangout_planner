@@ -109,3 +109,57 @@ export const linkInvitationToUser = async (userId, email) => {
     console.error('Error linking invitations:', err);
   }
 };
+
+// Update user profile
+
+export const updateProfile = async (req, res) => {
+  const userId = req.user.id;
+  const { name, email } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE users 
+       SET name = $1, email = $2 
+       WHERE id = $3 RETURNING id, name, email`,
+      [name, email, userId]
+    );
+
+    return res.status(200).json({ user: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+};
+
+export const updatePassword = async (req, res) => {
+  const userId = req.user.id;
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    const userResult = await pool.query(
+      "SELECT password FROM users WHERE id = $1",
+      [userId]
+    );
+
+    const valid = await bcrypt.compare(
+      currentPassword,
+      userResult.rows[0].password
+    );
+
+    if (!valid) {
+      return res.status(400).json({ message: "Incorrect current password" });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await pool.query(
+      "UPDATE users SET password = $1 WHERE id = $2",
+      [hashed, userId]
+    );
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update password" });
+  }
+};

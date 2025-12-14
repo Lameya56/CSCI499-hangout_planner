@@ -1,4 +1,4 @@
-import {Home, Inbox, Calendar, Search, Settings, UsersRoundIcon, Images, LandPlot, Globe} from "lucide-react";
+import {Home, Inbox, Calendar, Search, UsersRoundIcon, Images, LandPlot, Globe} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
