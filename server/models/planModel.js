@@ -1,5 +1,10 @@
 import { pool } from "../config/database.js";
 
+// Set offset hours (same as your controller)
+const TIME_OFFSET_HOURS = 5; 
+const nowWithOffset = () => new Date(Date.now() + TIME_OFFSET_HOURS * 60 * 60 * 1000);
+
+
 /* =========================
    Create Plan
 ========================= */
@@ -57,81 +62,6 @@ export const addActivities = async (planId, activities, userId = null) => {
 };
 
 /* =========================
-   GET USER PLANS
-========================= */
-export const getUserPlans = async (userId) => {
-  const result = await pool.query(
-    `
-    SELECT 
-      p.*,
-      i.status AS invitation_status
-    FROM plans p
-    LEFT JOIN invitations i
-      ON i.plan_id = p.id
-      AND i.invitee_id = $1
-    WHERE 
-      p.host_id = $1
-      OR i.invitee_id = $1
-    ORDER BY p.created_at DESC
-    `,
-    [userId]
-  );
-
-  return result.rows;
-};
-
-/* =========================
-   Get Plan Details
-========================= */
-export const getPlanDetails = async (planId) => {
-  const planRes = await pool.query(
-    `SELECT p.*, u.name AS host_name, u.email AS host_email
-     FROM plans p
-     JOIN users u ON p.host_id = u.id
-     WHERE p.id = $1`,
-    [planId]
-  );
-
-  if (planRes.rowCount === 0) return null;
-
-  const dates = await pool.query(
-    `SELECT pd.*, COUNT(dv.id) AS vote_count
-     FROM plan_dates pd
-     LEFT JOIN date_votes dv ON pd.id = dv.plan_date_id
-     WHERE pd.plan_id = $1
-     GROUP BY pd.id
-     ORDER BY vote_count DESC`,
-    [planId]
-  );
-
-  const activities = await pool.query(
-    `SELECT a.*, COUNT(av.id) AS vote_count, u.name AS suggested_by_name
-     FROM activities a
-     LEFT JOIN activity_votes av ON a.id = av.activity_id
-     LEFT JOIN users u ON a.suggested_by = u.id
-     WHERE a.plan_id = $1
-     GROUP BY a.id, u.name
-     ORDER BY vote_count DESC`,
-    [planId]
-  );
-
-  const invitations = await pool.query(
-    `SELECT i.*, u.name AS invitee_name
-     FROM invitations i
-     LEFT JOIN users u ON i.invitee_id = u.id
-     WHERE i.plan_id = $1`,
-    [planId]
-  );
-
-  return {
-    ...planRes.rows[0],
-    dates: dates.rows,
-    activities: activities.rows,
-    invitations: invitations.rows,
-  };
-};
-
-/* =========================
    Update Plan Status
 ========================= */
 export const updatePlanStatus = async (
@@ -144,10 +74,11 @@ export const updatePlanStatus = async (
     `UPDATE plans
      SET status = $1,
          confirmed_date = $2,
-         confirmed_activity_id = $3
-     WHERE id = $4
+         confirmed_activity_id = $3,
+         updated_at = $4
+     WHERE id = $5
      RETURNING *`,
-    [status, confirmedDate, confirmedActivityId, planId]
+    [status, confirmedDate, confirmedActivityId, nowWithOffset(), planId]
   );
 
   return result.rows[0];
@@ -166,10 +97,10 @@ export const updatePlanDetails = async (planId, updates) => {
        time = COALESCE($2, time),
        image_url = COALESCE($3, image_url),
        deadline = COALESCE($4, deadline),
-       updated_at = NOW()
-     WHERE id = $5
+       updated_at = $5
+     WHERE id = $6
      RETURNING *`,
-    [title, time, image_url, deadline, planId]
+    [title, time, image_url, deadline, nowWithOffset(), planId]
   );
 
   return result.rows[0];
@@ -181,10 +112,11 @@ export const updatePlanDetails = async (planId, updates) => {
 export const deletePlan = async (planId) => {
   const result = await pool.query(
     `UPDATE plans
-     SET status = 'cancelled'
+     SET status = 'cancelled',
+         updated_at = $2
      WHERE id = $1
      RETURNING *`,
-    [planId]
+    [planId, nowWithOffset()]
   );
 
   return result.rows[0];

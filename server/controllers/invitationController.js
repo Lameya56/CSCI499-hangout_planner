@@ -3,6 +3,12 @@ import * as PlanModel from '../models/planModel.js';
 import * as VoteModel from '../models/voteModel.js';
 import { pool } from "../config/database.js";
 
+// Set your desired offset in hours (e.g., 6 for UTC+5)
+const INVITE_EXPIRATION_OFFSET_HOURS = 5;
+
+// Helper: returns current time + offset in milliseconds
+const nowWithOffset = () => new Date(Date.now() + INVITE_EXPIRATION_OFFSET_HOURS * 60 * 60 * 1000);
+
 // Public route - check if invitation exists
 export const checkInvitation = async (req, res) => {
   try {
@@ -14,8 +20,8 @@ export const checkInvitation = async (req, res) => {
       return res.status(404).json({ message: 'Invitation not found' });
     }
 
-    // Check if deadline has passed
-    if (new Date(invitation.deadline) < new Date()) {
+    // Check if deadline has passed using offset
+    if (new Date(invitation.deadline) < nowWithOffset()) {
       return res.status(400).json({ message: 'This invitation has expired' });
     }
 
@@ -36,8 +42,6 @@ export const getMyInvitation = async (req, res) => {
     const { token } = req.params;
     const userId = req.user.id;
 
-    console.log('📥 Fetching invitation for user:', userId);
-
     const invitation = await InvitationModel.getInvitationByToken(token);
 
     if (!invitation) {
@@ -48,13 +52,9 @@ export const getMyInvitation = async (req, res) => {
     if (invitation.invitee_id !== userId) {
       return res.status(403).json({ message: 'This invitation is not for you' });
     }
-    console.log('Invitation status:', invitation.status);
-    console.log('Invitation invitee_id:', invitation.invitee_id);
-    console.log('Current user id:', userId)
 
     // Check if already responded
     if (invitation.status === 'responded') {
-      console.log('⚠️ User already responded to this invitation');
       return res.status(400).json({ 
         message: 'You have already responded to this invitation',
         alreadyResponded: true
@@ -66,8 +66,6 @@ export const getMyInvitation = async (req, res) => {
 
     // Get user's existing votes if any
     const existingVotes = await VoteModel.getUserVotes(userId, invitation.plan_id);
-
-    console.log('✅ Invitation fetched successfully');
 
     res.status(200).json({ 
       invitation,
@@ -108,8 +106,7 @@ export const respondToInvitation = async (req, res) => {
 
     const invitation = invitationResult.rows[0];
 
-    // 2. Block Checks
-    // If user did not respond to original invitation; "responded", "accepted", "declined" count as responded
+    // If invitation is pending, reject response
     if (invitation.status === "pending") {
       return res.status(400).json({
         message: "You did not respond to the original invitation. You cannot submit a decision."
@@ -130,26 +127,25 @@ export const respondToInvitation = async (req, res) => {
 
     const plan = planResult.rows[0];
 
-    // Plan cancelled
     if (plan.status === "cancelled") {
       return res.status(400).json({
         message: "This plan has been cancelled. Decision is not allowed."
       });
     }
 
-    // Decision window closed
     if (plan.decision_over_email_sent === true) {
       return res.status(400).json({
         message: "The decision window has ended. You can no longer accept or decline."
       });
     }
 
-    // 3. Update invitation status
+    // 3. Update invitation status with UTC timestamp
+    const respondedAtUTC = new Date(); // still UTC, best practice
     await pool.query(
       `UPDATE invitations
-       SET status = $1, responded_at = NOW()
-       WHERE id = $2`,
-      [status, invitation.id]
+       SET status = $1, responded_at = $2
+       WHERE id = $3`,
+      [status, respondedAtUTC, invitation.id]
     );
 
     res.json({ message: `Invitation ${status} successfully.` });
