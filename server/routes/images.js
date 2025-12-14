@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import multerS3 from 'multer-s3';
-import AWS from 'aws-sdk';
+import { S3Client } from "@aws-sdk/client-s3";
 
 const router = express.Router();
 
@@ -17,16 +17,18 @@ if (process.env.LOCAL === "TRUE") {
     },
   });
 } else {
-  const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY,
-    secretAccessKey: process.env.AWS_SECRET_KEY,
+  // AWS SDK v3 client
+  const s3 = new S3Client({
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY,
+      secretAccessKey: process.env.AWS_SECRET_KEY,
+    },
     region: process.env.AWS_REGION,
   });
 
   storage = multerS3({
     s3: s3,
     bucket: process.env.AWS_BUCKET,
-    acl: 'public-read',
     key: (req, file, cb) => {
       cb(null, Date.now() + '-' + file.originalname);
     },
@@ -45,3 +47,5 @@ router.post('/upload', upload.single('image'), (req, res) => {
 });
 
 export default router;
+
+
