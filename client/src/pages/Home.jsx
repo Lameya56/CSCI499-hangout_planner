@@ -1,74 +1,107 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { plansData } from "../data/plansData.js";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom"; // added
+import { Card, CardContent } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 
 const Home = () => {
   const [user, setUser] = useState(null);
   const [plans, setPlans] = useState([]);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
 
-      if (!token) {
-        console.log("No token found, redirecting to login");
-        window.location.href = "/login";
-        return;
-      }
-
+    const load = async () => {
       try {
-        const res = await fetch("/api/profile", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+        const profileRes = await fetch("/api/profile", {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await res.json();
-        if (res.ok) {
-          setUser(data.user);
-          try {
-            const plansRes = await fetch("/api/plans", { headers: { Authorization: `Bearer ${token}` } });
-            const plansData = await plansRes.json();
-            if (plansRes.ok) {
-              const formattedPlans = plansData.plans.map(p => ({
-                ...p,
-                image: p.image_url
-              }));
-              setPlans(formattedPlans);
-            }
-          } catch (err) {
-            console.error("Failed fetching plans:", err);
-          }
-          // setPlans(plansData); //loading mock data
-        } else {
-          console.error(data.message);
-          window.location.href = "/login";
-        }
-      } catch (err) {
-        console.error(err);
+        const profileData = await profileRes.json();
+        if (!profileRes.ok) throw new Error();
+
+        setUser(profileData.user);
+
+        const plansRes = await fetch("/api/plans", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const plansData = await plansRes.json();
+
+        const formatted = plansData.plans.map((p) => ({
+          ...p,
+          image: p.image_url,
+        }));
+
+        setPlans(formatted);
+      } catch {
+        window.location.href = "/login";
       }
     };
 
-    fetchProfile();
+    load();
   }, []);
 
   if (!user) return <p>Loading...</p>;
 
-  const getStatusColor = (plan) => {
-    if (plan.status == 'confirmed') return "bg-green-500"; // confirmed
-    if (plan.status == 'cancelled') return "bg-black"; // cancelled
+  /* =========================
+     STATUS TEXT
+  ========================= */
+  const getPlanText = (plan) => {
     const now = new Date();
     const deadline = new Date(plan.deadline);
-    return now < deadline ? "bg-yellow-400" : "bg-red-500"; // before or after deadline
+
+    if (plan.status === "cancelled") return "Cancelled";
+
+    if (plan.status === "pending" && now < deadline) {
+      return `Planning in progress • Respond by ${deadline.toLocaleString()}`;
+    }
+
+    if (plan.status === "confirmed" && !plan.decision_over_email_sent) {
+      if (plan.host_id === user.id) {
+        return `Final plan selected • Awaiting guests' decisions by ${new Date(deadline.getTime() + 24 * 60 * 60 * 1000).toLocaleString()}`;
+      }
+      return `Final plan selected • Awaiting your decision by ${new Date(deadline.getTime() + 24 * 60 * 60 * 1000).toLocaleString()}`;
+    }
+
+    if (plan.status === "confirmed" && plan.decision_over_email_sent) {
+      return "Decision window closed";
+    }
+
+    return "";
   };
 
-  const getHangoutDate = (plan) => {
-    const date = plan.confirmed_date.split("T")[0];
-    const datetime = new Date(`${date}T${plan.time}`);
-    return datetime;
-  }
+  /* =========================
+     STATUS COLOR
+  ========================= */
+  const getStatusColor = (plan) => {
+    const invite = plan.invitation_status;
+
+    if (plan.status === "cancelled") return "bg-black";
+
+    if (!invite && plan.host_id === user.id && plan.status === "pending") return "bg-blue-500"; // host automatically responded status
+
+    if (plan.status === "pending") {
+      if (invite === "pending") return "bg-yellow-400";
+      if (invite === "responded") return "bg-blue-500";
+    }
+
+    if (!invite && plan.host_id === user.id && plan.status === "confirmed") return "bg-green-500"; // host automatically accepted status
+
+    if (plan.status === "confirmed" && !plan.decision_over_email_sent) {
+      if (invite === "accepted") return "bg-green-500";
+      if (invite === "declined") return "bg-red-500";
+      return "bg-purple-500";
+    }
+
+    if (plan.status === "confirmed" && plan.decision_over_email_sent) {
+      if (invite === "accepted") return "bg-green-500";
+      if (invite === "declined") return "bg-red-500";
+      return "bg-gray-400";
+    }
+
+    return "bg-gray-300";
+  };
 
   return (
     <div>
@@ -76,7 +109,6 @@ const Home = () => {
         Welcome back, {user.name} 👋
       </h1>
 
-      {/* Grid layout for 3 cards per row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.map((plan) => (
           <Link
@@ -86,41 +118,33 @@ const Home = () => {
             aria-label={`Open plan: ${plan.title || "Plan"}`}
           >
             <Card className="relative overflow-hidden rounded-2xl shadow-md hover:shadow-lg transition group p-0 gap-0">
-              {/* Image section */}
               <img
                 src={plan.image}
                 alt={plan.title}
                 className="w-full h-50 object-cover rounded-t-2xl"
               />
-              {console.log(plans.map(p => p.image))}
 
-              {/* Overlay text (bottom-left) */}
               <CardContent className="text-left p-4">
-                <h2 className="text-lg font-semibold text-gray-900">{plan.title}</h2>
-                <p className="text-sm text-gray-600">
-                  {plan.status === 'confirmed'
-                    ? `Hangout: ${getHangoutDate(plan).toLocaleString()}`
-                    : plan.status === 'cancelled'
-                    ? 'Cancelled'
-                    : `Deadline: ${new Date(plan.deadline).toLocaleString()}`}
-                </p>
+                <h2 className="text-lg font-semibold text-gray 900">{plan.title} {plan.host_id == user.id && " (Host)"}</h2>
+                <p className="text-sm text-gray-600">{getPlanText(plan)}</p>
               </CardContent>
 
-              {/* Status Circle (bottom-right) */}
               <div
                 className={`absolute bottom-4 right-4 w-5 h-5 rounded-full ${getStatusColor(
                   plan
                 )}`}
                 title={
-                  plan.status === "confirmed"
-                    ? "Confirmed"
-                    : plan.status === "cancelled"
+                  plan.status === "cancelled"
                     ? "Cancelled"
+                    : plan.status === "confirmed" && plan.decision_over_email_sent
+                    ? "Decision window closed"
+                    : plan.status === "confirmed"
+                    ? "Final plan selected"
                     : new Date(plan.deadline) > new Date()
                     ? "Before deadline"
                     : "Past deadline"
                 }
-              ></div>
+              />
             </Card>
           </Link>
         ))}
