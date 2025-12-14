@@ -105,29 +105,89 @@ export const getPlanById = async (req, res) => {
 
 export const updatePlan = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params;          // plan id from /api/plans/:id
     const userId = req.user.id;
-    const updates = req.body;
 
-    const plan = await PlanModel.getPlanDetails(id);
+    // Use the same fields as createPlan:
+    const { title, dates, time, image, activities, invites, deadline, hostVote } = req.body;
 
-    if (!plan) {
-      return res.status(404).json({ message: 'Plan not found' });
+    // 1) Make sure plan exists and user is host
+    const existingPlan = await PlanModel.getPlanDetails(id);
+    if (!existingPlan) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+    if (existingPlan.host_id !== userId) {
+      return res.status(403).json({ message: "Only host can update plan" });
     }
 
-    if (plan.host_id !== userId) {
-      return res.status(403).json({ message: 'Only host can update plan' });
+    // Prevent updates if plan is cancelled
+    if (existingPlan.status === "cancelled") {
+      return res.status(400).json({
+        message: "This plan has been cancelled and can no longer be updated",
+      });
     }
 
-    // Update plan logic here (add specific update functions to model)
-    await PlanModel.updatePlanDetails(id, updates);
+    // 2) Update the core plan row (title, time, image_url, deadline)
+    //    This uses your existing PlanModel.updatePlanDetails but
+    //    we make sure to pass image_url as well.
+    await PlanModel.updatePlanDetails(id, {
+      title,
+      time,
+      image_url: image,    // ⭐ make sure your updatePlanDetails handles this
+      deadline,
+    });
 
+    // 3) Replace dates: delete old, insert new (using your existing addPlanDates)
+    await pool.query("DELETE FROM plan_dates WHERE plan_id = $1", [id]);
+    let addedDates = [];
+    if (dates && dates.length > 0) {
+      const dateValues = dates.map((d) => d.name); // same shape as createPlan
+      addedDates = await PlanModel.addPlanDates(id, dateValues);
+    }
+
+    // 4) Replace activities: delete old, insert new
+    await pool.query("DELETE FROM activities WHERE plan_id = $1", [id]);
+    let addedActivities = [];
+    if (activities && activities.length > 0) {
+      addedActivities = await PlanModel.addActivities(id, activities);
+    }
+
+    // 5) Replace invitations: delete old, recreate from emails
+    await pool.query("DELETE FROM invitations WHERE plan_id = $1", [id]);
+    if (invites && invites.length > 0) {
+      const invitees = invites.map((inv) => ({ email: inv.email }));
+      const invitations = await InvitationModel.createInvitations(id, invitees);
+
+      // If you want to re-email updated invite list, you can re-use sendInvitationEmail:
+      for (const invitation of invitations) {
+        await sendInvitationEmail(
+          invitation,
+          { ...existingPlan, id, title, image_url: image, deadline, time },
+          title
+        );
+      }
+    }
+
+    // 6) Optional: host auto-vote again for the updated set of options
+    if (hostVote && addedDates.length > 0 && addedActivities.length > 0) {
+      const dateIds = addedDates.map((d) => d.id);
+      const activityIds = addedActivities.map((a) => a.id);
+
+      // Depending on your schema, you might want to clear old votes here,
+      // but at minimum this will add votes for the new options.
+      await VoteModel.voteDates(userId, id, dateIds);
+      await VoteModel.voteActivities(userId, id, activityIds);
+    }
+
+    // 7) Return fresh plan details (same shape PlanDetails already uses)
     const updatedPlan = await PlanModel.getPlanDetails(id);
 
-    res.status(200).json({ message: 'Plan updated successfully', plan: updatedPlan });
+    return res
+      .status(200)
+      .json({ message: "Plan updated successfully", plan: updatedPlan });
   } catch (err) {
-    console.error('Error updating plan:', err);
-    res.status(500).json({ message: 'Failed to update plan' });
+    console.error("Error updating plan:", err);
+    res.status(500).json({ message: "Failed to update plan" });
   }
 };
 
@@ -156,7 +216,6 @@ export const deletePlan = async (req, res) => {
 };
 
 
-
 /**
  * Get finalized plan details + invitation info by token
  */
@@ -182,6 +241,8 @@ export const getFinalizedPlanByToken = async (req, res) => {
     // 2. Get the plan details
     const planResult = await pool.query(
       `SELECT p.id, p.title, p.host_id, u.name AS host_name,
+              p.status,
+              p.decision_over_email_sent,
               p.confirmed_date,
               p.time,
               a.id AS winning_activity_id,
@@ -215,7 +276,7 @@ export const getFinalizedPlanByToken = async (req, res) => {
     const invitees = inviteesResult.rows;
 
     // 4. Build response
-    res.json({
+    return res.json({
       invitation: {
         id: invitation.invitation_id,
         status: invitation.status,
@@ -225,6 +286,8 @@ export const getFinalizedPlanByToken = async (req, res) => {
         id: plan.id,
         title: plan.title,
         host_name: plan.host_name,
+        status: plan.status,
+        decision_over_email_sent: plan.decision_over_email_sent,
         finalized_datetime,
         winning_activity: {
           id: plan.winning_activity_id,
@@ -236,6 +299,6 @@ export const getFinalizedPlanByToken = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };

@@ -13,7 +13,7 @@ import invitationRoutes from './routes/invitationRoutes.js';
 import voteRoutes from './routes/voteRoutes.js';
 import './utils/cronJob.js';
 import groupRoutes from './routes/groupRoutes.js';
-
+import exploreRoutes from './routes/exploreRoutes.js';
 
 
 const app = express()
@@ -96,7 +96,7 @@ app.use("/api/plans", planRoutes);
 app.use('/api/invitations', invitationRoutes);
 app.use('/api/votes', voteRoutes);
 app.use("/api/groups", groupRoutes);
-
+app.use('/api/explore', exploreRoutes);
 
 const PORT = process.env.PORT || 3001
 
@@ -112,6 +112,12 @@ server.listen(PORT, "0.0.0.0", () => {
   
 })
 console.log("JWT_SECRET is:", process.env.JWT_SECRET);
+
+
+
+
+
+
 
 
 
