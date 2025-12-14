@@ -1,5 +1,5 @@
 # Logs
-# .env
+.env
 logs
 *.log
 npm-debug.log*
@@ -12,6 +12,9 @@ node_modules
 dist
 dist-ssr
 *.local
+
+uploads/*
+!uploads/.gitkeep
 
 # Editor directories and files
 .vscode/*

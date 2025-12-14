@@ -1,11 +1,71 @@
 # CSCI499-hangout_planner
-Hangout Planner is a web application that allows users to create, plan, and manage hangout events with friends. Users can sign up, log in, and securely manage their events. The app uses JWT authentication, React on the frontend, and Node.js with PostgreSQL on the backend.
+Hangout Planner is a full-stack web application designed to simplify social coordination by helping users plan, organize, and manage hangouts with friends. Users can create events, invite friends, vote on activities and dates, and stay updated with real-time notifications. The platform also encourages community engagement through an Explore tab, where users can share and discover activity ideas, and a Memories tab to preserve moments after each event.
+
+Built with a modern tech stack, Hangout Planner ensures a responsive, secure, and interactive experience: React + TailwindCSS on the frontend, Node.js + Express on the backend, PostgreSQL for data storage, and JWT for authentication.
+
+Key highlights include automatic final decision generation for group events, live group chat, post likes and comments, searchable and sortable community content, and personalized notifications for upcoming or pending events.
+
+Whether coordinating with friends or exploring new hangout ideas, Hangout Planner streamlines the process and enhances social engagement.
 ## Features
-- User registration and login (JWT authentication)
-- Create and manage events
-- Invite friends via email
-- Dashboard to view upcoming hangouts
-- Responsive UI built with React and Tailwind
+  ### 🔐 Authentication
+- Secure user registration and login
+- JWT (JSON Web Token) based session management
+- Password encryption using bcrypt
+
+### 🗓️ Event Planning
+- Create hangout plans with title, description, date, time, and location
+- Automatically creates groups when users are invited
+- Dashboard to view:
+  - Upcoming events
+  - Pending invitations
+  - Confirmed plans
+
+### 🗳️ Voting System
+- Invitees can suggest activities
+- Vote on dates and times
+- Real-time vote tracking
+
+### 📧 Email Invitations
+- Automated email invites to participants
+- Personalized invitation links
+
+### ⚙️ Smart Final Decision Generator
+- Automatically selects best time based on group availability
+- Chooses the most popular activity
+
+### ✅ Final Decision Notifications
+- Users receive notifications when events are finalized
+- Ability to confirm or decline attendance
+
+### 🗓️ Calendar View
+- Displays pending and confirmed events
+- Personal schedule overview
+
+### 🌍 Explore Tab (Community Feed)
+- Create, edit, and delete hangout idea posts (full CRUD)
+- Like and comment on posts
+- Search posts by title, tags, location, and keywords
+- Sort posts by:
+  - Newest
+  - Oldest
+  - Most liked
+  - Most commented
+
+### 📸 Memories Tab
+- Upload images from hangouts
+- Add notes and reflections
+- Associate memories with specific events
+- Personal timeline of past hangouts
+
+### 💬 Group Chat
+- Live, real-time chat for event participants
+- Enables quick coordination
+- Note: Messages are not currently persisted
+
+### 🔔 Reminders & Notifications
+- Automated reminders for users who haven’t voted
+- Notifications for upcoming hangouts
+  
 ## Tech Stack
 - **Frontend:** React, TailwindCSS, React Router, React Hook Form
 - **Backend:** Node.js, Express.js, bcrypt, JWT

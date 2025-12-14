@@ -14,7 +14,7 @@ const router = express.Router();
 router.post('/', authenticateJWT, createPlan);
 router.get('/', authenticateJWT, getUserPlans);
 router.get('/:id', authenticateJWT, getPlanById);
-router.put('/', authenticateJWT, updatePlan);
+router.put('/:id', authenticateJWT, updatePlan);
 router.delete('/:id', authenticateJWT, deletePlan);
 router.get('/finalized/:token', getFinalizedPlanByToken);
 
