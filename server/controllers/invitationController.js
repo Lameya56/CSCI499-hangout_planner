@@ -96,7 +96,7 @@ export const respondToInvitation = async (req, res) => {
   try {
     // 1. Find invitation by token
     const invitationResult = await pool.query(
-      `SELECT id, status 
+      `SELECT id, plan_id, status 
        FROM invitations 
        WHERE invite_token = $1`,
       [token]
@@ -108,9 +108,40 @@ export const respondToInvitation = async (req, res) => {
 
     const invitation = invitationResult.rows[0];
 
-    // 2. Check if already responded
-    if (invitation.status == "accepted" || invitation.status == "declined") {
-      return res.status(400).json({ message: "You have already responded to this invitation." });
+    // 2. Block Checks
+    // If user did not respond to original invitation; "responded", "accepted", "declined" count as responded
+    if (invitation.status === "pending") {
+      return res.status(400).json({
+        message: "You did not respond to the original invitation. You cannot submit a decision."
+      });
+    }
+
+    // Check plan status and decision window
+    const planResult = await pool.query(
+      `SELECT status, decision_over_email_sent 
+       FROM plans 
+       WHERE id = $1`,
+      [invitation.plan_id]
+    );
+
+    if (planResult.rowCount === 0) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    const plan = planResult.rows[0];
+
+    // Plan cancelled
+    if (plan.status === "cancelled") {
+      return res.status(400).json({
+        message: "This plan has been cancelled. Decision is not allowed."
+      });
+    }
+
+    // Decision window closed
+    if (plan.decision_over_email_sent === true) {
+      return res.status(400).json({
+        message: "The decision window has ended. You can no longer accept or decline."
+      });
     }
 
     // 3. Update invitation status

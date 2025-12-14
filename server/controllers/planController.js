@@ -120,6 +120,13 @@ export const updatePlan = async (req, res) => {
       return res.status(403).json({ message: "Only host can update plan" });
     }
 
+    // Prevent updates if plan is cancelled
+    if (existingPlan.status === "cancelled") {
+      return res.status(400).json({
+        message: "This plan has been cancelled and can no longer be updated",
+      });
+    }
+
     // 2) Update the core plan row (title, time, image_url, deadline)
     //    This uses your existing PlanModel.updatePlanDetails but
     //    we make sure to pass image_url as well.
@@ -209,7 +216,6 @@ export const deletePlan = async (req, res) => {
 };
 
 
-
 /**
  * Get finalized plan details + invitation info by token
  */
@@ -235,6 +241,8 @@ export const getFinalizedPlanByToken = async (req, res) => {
     // 2. Get the plan details
     const planResult = await pool.query(
       `SELECT p.id, p.title, p.host_id, u.name AS host_name,
+              p.status,
+              p.decision_over_email_sent,
               p.confirmed_date,
               p.time,
               a.id AS winning_activity_id,
@@ -268,7 +276,7 @@ export const getFinalizedPlanByToken = async (req, res) => {
     const invitees = inviteesResult.rows;
 
     // 4. Build response
-    res.json({
+    return res.json({
       invitation: {
         id: invitation.invitation_id,
         status: invitation.status,
@@ -278,6 +286,8 @@ export const getFinalizedPlanByToken = async (req, res) => {
         id: plan.id,
         title: plan.title,
         host_name: plan.host_name,
+        status: plan.status,
+        decision_over_email_sent: plan.decision_over_email_sent,
         finalized_datetime,
         winning_activity: {
           id: plan.winning_activity_id,
@@ -289,6 +299,6 @@ export const getFinalizedPlanByToken = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };

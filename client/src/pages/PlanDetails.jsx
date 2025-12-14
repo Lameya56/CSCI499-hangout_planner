@@ -154,6 +154,32 @@ export default function PlanDetails() {
     };
   }, [id]);
 
+  // Cancel plan (mark status = 'cancelled') - only host sees this button
+  const handleCancel = async () => {
+    if (!window.confirm('Are you sure you want to cancel this plan? This cannot be undone.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/plans/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json.message || 'Failed to cancel plan');
+      }
+
+      // Notify other parts of the app and navigate away
+      window.dispatchEvent(new Event('plans:updated'));
+      navigate('/home');
+    } catch (e) {
+      alert(e.message || 'Failed to cancel plan');
+    }
+  };
+
   const now = new Date();
 
   const {
@@ -405,7 +431,7 @@ export default function PlanDetails() {
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <CardTitle className="text-2xl">{title}</CardTitle>
+              <CardTitle className={`text-2xl ${plan.status === "cancelled" ? "opacity-50 pointer-events-none" : ""}`}>{title}</CardTitle>
               <CardDescription className="mt-1 flex items-center gap-2 flex-wrap">
                 {location ? (
                   <span className="inline-flex items-center gap-1">
@@ -420,7 +446,14 @@ export default function PlanDetails() {
 
             <div className="flex flex-col items-end gap-2">
               <StatusBadge kind={viewerStatus} />
-              {deadlineISO ? (
+              {plan.status === "cancelled" ? (
+                <span
+                  className="text-xs px-2 py-1 rounded border bg-red-50 border-red-300 text-red-700"
+                  title="Plan cancelled"
+                >
+                  Plan Cancelled by Host
+                </span>
+              ) : deadlineISO ? (
                 <span
                   className={[
                     "text-xs px-2 py-1 rounded border",
@@ -430,8 +463,7 @@ export default function PlanDetails() {
                   ].join(" ")}
                   title="Voting deadline"
                 >
-                  {votingClosed ? "Voting closed" : "Voting open"} •{" "}
-                  {new Date(deadlineISO).toLocaleString()}
+                  {`${votingClosed ? "Voting closed" : "Voting open"} • ${new Date(deadlineISO).toLocaleString()}`}
                 </span>
               ) : (
                 <span className="text-xs px-2 py-1 rounded border bg-muted text-foreground/70">
@@ -440,36 +472,60 @@ export default function PlanDetails() {
               )}
 
               {/* Actions */}
-              {viewerStatus === "host" ? (
-                <Button
-                  size="sm"
-                  onClick={() => navigate(`/plan?planId=${id}`)}
-                  title="Update this plan"
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Update plan
-                </Button>
-              ) : (
-                <>
-                  {viewerInviteToken ? (
-                    <Link to={`/respond/${viewerInviteToken}`}>
-                      <Button size="sm" variant="secondary" title="Edit your response">
-                        <Repeat2 className="h-4 w-4 mr-2" />
-                        Edit your response
-                      </Button>
-                    </Link>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    title="Use an invite link from your email"
-                    onClick={handleUseInviteLink}
-                  >
-                    <Link2 className="h-4 w-4 mr-2" />
-                    Use invite link
-                  </Button>
-                </>
-              )}
+              <div className="flex gap-2 flex-wrap">
+                {viewerStatus === "host" ? (
+                  <>
+                    {/* Update Plan */}
+                    <Button
+                      size="sm"
+                      onClick={() => navigate(`/plan?planId=${id}`)}
+                      disabled={plan.status === "cancelled"}
+                      title="Update this plan"
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Update plan
+                    </Button>
+
+                    {/* Cancel Plan */}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleCancel}
+                      disabled={plan.status === "cancelled"}
+                      title={
+                        plan.status === "cancelled"
+                          ? "This plan is already cancelled"
+                          : "Cancel this plan"
+                      }
+                    >
+                      Cancel Plan
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {/* Edit Response (if user already responded) */}
+                    {viewerInviteToken && (
+                      <Link to={`/respond/${viewerInviteToken}`}>
+                        <Button size="sm" variant="secondary" title="Edit your response">
+                          <Repeat2 className="h-4 w-4 mr-2" />
+                          Edit your response
+                        </Button>
+                      </Link>
+                    )}
+
+                    {/* Use Invite Link */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="Use an invite link from your email"
+                      onClick={handleUseInviteLink}
+                    >
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Use invite link
+                    </Button>
+                  </>
+                )}
+              </div>
 
               <Link to="/calendar">
                 <Button size="sm" variant="outline">
@@ -481,7 +537,7 @@ export default function PlanDetails() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-8">
+        <CardContent className={`space-y-8 ${plan.status === "cancelled" ? "opacity-50 pointer-events-none" : ""}`}>
           {/* Winners (after deadline) */}
           {votingClosed && (
             <section className="rounded-lg border bg-card">
@@ -534,7 +590,7 @@ export default function PlanDetails() {
           <Separator />
 
           {/* Proposals (shows original + suggestions) */}
-          <section className="rounded-lg border bg-card">
+          <section className={`rounded-lg border bg-card ${plan.status === "cancelled" ? "opacity-50 pointer-events-none" : ""}`}>
             <div className="p-4 border-b font-semibold">
               {votingClosed ? "All Considered Options" : "Current Proposals (with Suggestions)"}
             </div>

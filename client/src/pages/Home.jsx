@@ -57,11 +57,18 @@ const Home = () => {
   if (!user) return <p>Loading...</p>;
 
   const getStatusColor = (plan) => {
-    if (plan.confirmed) return "bg-green-500"; // confirmed
+    if (plan.status == 'confirmed') return "bg-green-500"; // confirmed
+    if (plan.status == 'cancelled') return "bg-black"; // cancelled
     const now = new Date();
     const deadline = new Date(plan.deadline);
     return now < deadline ? "bg-yellow-400" : "bg-red-500"; // before or after deadline
   };
+
+  const getHangoutDate = (plan) => {
+    const date = plan.confirmed_date.split("T")[0];
+    const datetime = new Date(`${date}T${plan.time}`);
+    return datetime;
+  }
 
   return (
     <div>
@@ -91,9 +98,11 @@ const Home = () => {
               <CardContent className="text-left p-4">
                 <h2 className="text-lg font-semibold text-gray-900">{plan.title}</h2>
                 <p className="text-sm text-gray-600">
-                  {plan.confirmed
-                    ? `Hangout: ${new Date(plan.hangoutDate).toLocaleDateString()}`
-                    : `Deadline: ${new Date(plan.deadline).toLocaleDateString()}`}
+                  {plan.status === 'confirmed'
+                    ? `Hangout: ${getHangoutDate(plan).toLocaleString()}`
+                    : plan.status === 'cancelled'
+                    ? 'Cancelled'
+                    : `Deadline: ${new Date(plan.deadline).toLocaleString()}`}
                 </p>
               </CardContent>
 
@@ -103,8 +112,10 @@ const Home = () => {
                   plan
                 )}`}
                 title={
-                  plan.confirmed
+                  plan.status === "confirmed"
                     ? "Confirmed"
+                    : plan.status === "cancelled"
+                    ? "Cancelled"
                     : new Date(plan.deadline) > new Date()
                     ? "Before deadline"
                     : "Past deadline"

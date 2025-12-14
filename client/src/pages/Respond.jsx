@@ -165,6 +165,7 @@ const Respond = () => {
         navigate('/home');
       } else {
         alert(data.message || 'Failed to submit response');
+        navigate('/home');
       }
     } catch {
       alert('Failed to submit response');
