@@ -106,7 +106,6 @@ function StatusBadge({ kind }) {
 export default function PlanDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const navigate = useNavigate();
   const [plan, setPlan] = useState(null);
   const [viewer, setViewer] = useState(null);
   const [loading, setLoading] = useState(true);
