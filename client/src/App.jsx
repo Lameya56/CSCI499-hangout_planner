@@ -23,7 +23,8 @@ import Explore from './pages/Explore.jsx'
 import ExploreCreate from './pages/ExploreCreate.jsx';
 import ExploreDetail from './pages/ExploreDetail.jsx';
 import ExploreEdit from './pages/ExploreEdit.jsx';
-
+import Memories from './pages/Memories.jsx'
+import MemoryBoard from "@/pages/MemoryBoard";
 function AppRoutes() {
   let element = useRoutes([
     // Public routes
@@ -43,9 +44,9 @@ function AppRoutes() {
         { path: "/calendar", element: <Calendar /> },
         { path: "/plans/:id", element: <PlanDetails /> },
         { path: "/groups", element: <Groups /> },
-        // { path: "/memories", element: <Memories/>}
+        { path: "/memories", element: <Memories/>},
+        {path: "/memories/:id", element: <MemoryBoard/>},
         { path: "/explore", element: <Explore /> },
-        // { path: "/explore/:id", element: <ExploreDetails /> },
         { path: "/explore/create", element: <ExploreCreate /> }, 
         { path: "/explore/:id", element: <ExploreDetail /> },    
         { path: "/explore/:id/edit", element: <ExploreEdit /> }, 

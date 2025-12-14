@@ -86,12 +86,6 @@ CREATE TABLE IF NOT EXISTS chat(
     time_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS group_messages(
-    id BIGSERIAL PIMARY KEY NOT NULL,
-    
-
-);
-
 
 -- Create stories/posts table
 CREATE TABLE IF NOT EXISTS explore_posts(
