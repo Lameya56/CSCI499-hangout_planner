@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -480,6 +479,7 @@ export default function PlanDetails() {
                     <Button
                       size="sm"
                       onClick={() => navigate(`/plan?planId=${id}`)}
+                      disabled={plan.status === "cancelled"}
                       title="Update this plan"
                     >
                       <Pencil className="h-4 w-4 mr-2" />
@@ -589,7 +589,7 @@ export default function PlanDetails() {
 
           <Separator />
 
-          {/* Proposals (shows original + suggestions) — same 2-column layout */}
+          {/* Proposals (shows original + suggestions) */}
           <section className={`rounded-lg border bg-card ${plan.status === "cancelled" ? "opacity-50 pointer-events-none" : ""}`}>
             <div className="p-4 border-b font-semibold">
               {votingClosed ? "All Considered Options" : "Current Proposals (with Suggestions)"}

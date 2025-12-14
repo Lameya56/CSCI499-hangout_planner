@@ -120,6 +120,13 @@ export const updatePlan = async (req, res) => {
       return res.status(403).json({ message: "Only host can update plan" });
     }
 
+    // Prevent updates if plan is cancelled
+    if (existingPlan.status === "cancelled") {
+      return res.status(400).json({
+        message: "This plan has been cancelled and can no longer be updated",
+      });
+    }
+
     // 2) Update the core plan row (title, time, image_url, deadline)
     //    This uses your existing PlanModel.updatePlanDetails but
     //    we make sure to pass image_url as well.
