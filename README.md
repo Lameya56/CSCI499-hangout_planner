@@ -109,21 +109,41 @@ Psql -U postgres
 ```
 
 ### Inside the `server` directory 
-Create an `.env` file with the contents below and add your PostgreSQL credentials and JWT secret: 
+Create an `.env` file in the with the contents below and add your PostgreSQL credentials and JWT secret: 
 ```
-PGDATABASE=hangout_planner  
-PGHOST=localhost  
-PGPORT=5432  
-PGUSER=postgres  
-PGPASSWORD=yourpassword  
-JWT_SECRET=yourjwtsecret  
-FRONTEND_URL=http://localhost:5173  
-EMAIL_USER=letsgo.noreply.bot@gmail.com  
-EMAIL_PASSWORD=pwfp mbjc sxpd fhag  
+PGDATABASE=hangout_planner
+PGHOST=localhost
+PGPASSWORD=robot
+PGPORT=5432
+PGUSER=postgres
+JWT_SECRET=yourjwtsecret
+FRONTEND_URL=https://lets-go.site
+LOCAL_URL=http://localhost:5173
+BACKEND_URL=http://localhost:3001
+EMAIL_USER=letsgo.noreply.bot@gmail.com
+EMAIL_PASSWORD=pwfp mbjc sxpd fhag
+PGDATABASEBUILD=
+PGHOSTBUILD=
+PGPASSWORDBUILD=
+PGPORTBUILD=5432
+PGUSERBUILD=postgres
+LOCAL=TRUE
+AWS_ACCESS_KEY=
+AWS_SECRET_KEY=
+AWS_REGION=
+AWS_BUCKET=
+```
+### Inside the `client` directory 
+Create an `.env` file in the with the contents below: 
+```
+VITE_BACKEND_URL=http://localhost:3001
+VITE_SOCKET_URL=https://lets-go.site
+VITE_LOCAL=TRUE
 ```
 
+
 ### Frontend setup
-To run the frontend:  
+To run the frontend (local):  
 ```
 cd client  
 npm i        // to install all dependencies  
@@ -131,20 +151,61 @@ npm run dev  // to start http://localhost:5173
 ```
 
 ### Backend Setup
-To run the backend:  
+To run the backend (local):  
 open another terminal simultaneously:  
 ```
 cd server  
 npm i      // to install dependencies  
 npm start  // to start server on localhost:3001
 ```    
+## Setting up in the cloud (Amazon AWS)
+Create an Amazon ec2 instance \
+Create an Amazon RDS instance with postgresql and link the ec2 instance\
+Setup elastic IP on the ec2 instance \
+Install git or ssh into the ec2 server and upload files.\
+Install postgresql\
+Install nodejs\
+install pm2\
+Modify the IP in the envs where it says https://lets-go.site to your elastic IP.\
+Modify in the ENVs to say Local==FALSE\
+And also add the amazon RDS credientials\
+Setup an Amazon s3 bucket and also inser the credentials under AWS_ACCESS_KEY in the server env and below.\
+If a domain has been purchased, add a new A rules. Add the elasticIP and save.\
+Do the same thing but with www\
+Change the ENVs to to the new purchased Domain.\
+Install and setup nginx in the ec2 instance\
+Then using Lets encrypt to get https and SSL encryption, CD into the main folder and do the following\
+```
+sudo yum install -y certbot python3-certbot-nginx
+sudo certbot -nginx-d <domain or elastic ip> -d <www. domain or elastic ip>
+```
+### Frontend setup
+To run the frontend (Cloud):  
+This will continue to run in the background even when terminal is closed.
+```
+cd client  
+npm i
+npm run build
+sudo systemctl restart nginx
+```
 
-## To update on a EC2 instance
+
+### Backend Setup
+To run the backend (cloud):  
+This will continue to run in the background even when terminal is closed.
+```
+cd server  
+pm2 start npm --name "server" -- start
+```
+
+### To update on a EC2 instance
 To begin, close the back end first. So start of with doing pm2 status\
 then do pm2 delete followed by the name of the status to close.\
 And also pm2 flush to clear logs if you want.\
 Upload the new files with github.\
 Cd into the server folder, and run \
-pm2 start npm --name "server" -- start\
+```
+pm2 start npm --name "server" -- start
+```
 After CD back into the client folder and instead of npm run dev, we do npm run build.\
 Then update nginx by doing: Sudo systemctl restart nginx
